@@ -55,7 +55,7 @@ public class ChatController : ControllerBase
     [HttpGet("history")]
     public async Task<ActionResult<List<ChatSessionDto>>> GetHistory()
     {
-        var sessions = await _history.GetSessionsAsync("sk-user");
+        var sessions = await _history.GetSessionsAsync("dummy-user");
         return Ok(sessions.Select(s => new ChatSessionDto
         {
             Id = s.Id,
@@ -63,7 +63,7 @@ public class ChatController : ControllerBase
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt,
             MessageCount = s.Messages.Count
-        }));
+        }).ToList());
     }
 
     [HttpGet("history/{sessionId:guid}")]

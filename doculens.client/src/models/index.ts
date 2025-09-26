@@ -9,6 +9,7 @@ export interface ChatMessage {
 export interface ChatResponse {
     answer: string;
     sources: string[];
+    sessionId?: string;
 }
 
 export interface AppSettings {

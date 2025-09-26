@@ -2,18 +2,112 @@ import { useState, useEffect } from 'react';
 import { History, X, MessageSquare, Trash2, Search, Calendar, User, Bot, Clock } from 'lucide-react';
 import type { ChatMessage, ChatSession, ChatSessionDto, ChatSessionFull } from '../models';
 
-const api = {
-    list: async (): Promise<ChatSessionDto[]> =>
-        fetch('/api/chat/history')
-            .then(r => (r.ok ? r.json() : Promise.reject(r))),
+interface RawApiResponse<T = any> {
+    $id?: string;
+    $values?: T[];
+    $ref?: string;
+    [key: string]: any;
+}
 
-    get: async (id: string): Promise<ChatSessionFull> =>
-        fetch(`/api/chat/history/${id}`)
-            .then(r => (r.ok ? r.json() : Promise.reject(r))),
+export function removeDollarProperties<T>(obj: T): any {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeDollarProperties(item));
+    }
+
+    if (typeof obj === 'object') {
+        const cleanedObj: any = {};
+
+        const objAsAny = obj as any;
+        if (objAsAny.$values && Array.isArray(objAsAny.$values)) {
+            return objAsAny.$values.map((item: any) => removeDollarProperties(item));
+        }
+
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key) && !key.startsWith('$')) {
+                const value = (obj as any)[key];
+
+                if (value && typeof value === 'object' && !Array.isArray(value) && value.$values) {
+                    cleanedObj[key] = removeDollarProperties(value);
+                } else {
+                    cleanedObj[key] = removeDollarProperties(value);
+                }
+            }
+        }
+
+        return cleanedObj;
+    }
+
+    return obj;
+}
+
+export function cleanApiResponse<T>(response: RawApiResponse<T> | T): T[] | any {
+    if (!response) return response;
+
+    if (typeof response === 'object' && '$values' in response && Array.isArray(response.$values)) {
+        return response.$values.map(item => removeDollarProperties(item));
+    }
+
+    if (Array.isArray(response)) {
+        return response.map(item => removeDollarProperties(item));
+    }
+
+    return removeDollarProperties(response);
+}
+
+export function cleanChatSessionResponse(response: any): any {
+    if (!response) return response;
+
+    const cleaned: any = {};
+
+    for (const key in response) {
+        if (response.hasOwnProperty(key) && !key.startsWith('$')) {
+            if (key === 'messages' && response[key]) {
+                const messagesObj = response[key];
+                if (messagesObj.$values && Array.isArray(messagesObj.$values)) {
+                    cleaned[key] = messagesObj.$values.map((message: any) => removeDollarProperties(message));
+                } else if (Array.isArray(messagesObj)) {
+                    cleaned[key] = messagesObj.map((message: any) => removeDollarProperties(message));
+                } else {
+                    cleaned[key] = removeDollarProperties(messagesObj);
+                }
+            } else {
+                cleaned[key] = removeDollarProperties(response[key]);
+            }
+        }
+    }
+
+    return cleaned;
+}
+
+const api = {
+    list: async (): Promise<ChatSessionDto[]> => {
+        const response = await fetch('/chat/history');
+        if (!response.ok) throw response;
+
+        const rawData: RawApiResponse<ChatSessionDto> = await response.json();
+
+        const cleanedData = cleanApiResponse(rawData);
+
+        return Array.isArray(cleanedData) ? cleanedData : [cleanedData as ChatSessionDto];
+    },
+
+    get: async (id: string): Promise<ChatSessionFull> => {
+        const response = await fetch(`/chat/history/${id}`);
+        if (!response.ok) throw response;
+
+        const rawData: RawApiResponse<ChatSessionFull> = await response.json();
+
+        const cleanedData = cleanChatSessionResponse(rawData);
+        return Array.isArray(cleanedData) ? cleanedData[0] : cleanedData as ChatSessionFull;
+    },
 
     delete: async (id: string): Promise<void> => {
-        const r = await fetch(`/api/chat/history/${id}`, { method: 'DELETE' });
-        if (!r.ok) throw r;
+        const response = await fetch(`/chat/history/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw response;
     },
 };
 
@@ -21,21 +115,22 @@ export const ChatHistoryDrawer = ({
     isOpen,
     onClose,
     currentMessages,
-    onLoadSession
+    onLoadSession,
+    reload,
+    activeSessionId
 }: {
     isOpen: boolean;
     onClose: () => void;
     currentMessages: ChatMessage[];
-    onLoadSession: (messages: ChatMessage[]) => void;
+    onLoadSession: (messages: ChatMessage[], sessionId: string) => void;
+    reload?: number;
+    activeSessionId?: string | null;
 }) => {
     const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedSession, setSelectedSession] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (isOpen) loadChatHistory();
-    }, [isOpen]);
+    useEffect(() => { loadChatHistory(); }, [isOpen, reload]);
 
     const loadChatHistory = async () => {
         setLoading(true);
@@ -60,15 +155,14 @@ export const ChatHistoryDrawer = ({
     const handleLoadSession = async (session: ChatSession) => {
         try {
             const full = await api.get(session.id);
-            onLoadSession(
-                full.messages.map(m => ({
-                    id: m.id,
-                    role: m.role as 'user' | 'assistant',
-                    content: m.content,
-                    timestamp: new Date(m.timestamp),
-                }))
-            );
-            setSelectedSession(session.id);
+            const messages = full.messages.map(m => ({
+                id: m.id,
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+                timestamp: new Date(m.timestamp),
+            }));
+
+            onLoadSession(messages, session.id);
             onClose();
         } catch (e) {
             console.error('Failed to load session:', e);
@@ -77,11 +171,13 @@ export const ChatHistoryDrawer = ({
 
     const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        try {
-            await api.delete(sessionId);
-            setChatSessions(prev => prev.filter(s => s.id !== sessionId));
-        } catch (e) {
-            console.error('Failed to delete session:', e);
+        if (window.confirm('Are you sure you want to delete this conversation?')) {
+            try {
+                await api.delete(sessionId);
+                setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+            } catch (e) {
+                console.error('Failed to delete session:', e);
+            }
         }
     };
 
@@ -173,50 +269,47 @@ export const ChatHistoryDrawer = ({
                                         {group}
                                     </h3>
                                     <div className="space-y-2">
-                                        {sessions.map(s => (
-                                            <div
-                                                key={s.id}
-                                                onClick={() => handleLoadSession(s)}
-                                                className={`group relative p-3 rounded-lg border cursor-pointer transition-all hover:bg-gray-50 hover:border-purple-200 ${selectedSession === s.id ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-200'
-                                                    }`}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2">{s.title}</h4>
-                                                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                                                            <span className="flex items-center gap-1">
-                                                                <MessageSquare className="h-3 w-3" />
-                                                                {s.messages.length} messages
-                                                            </span>
-                                                            <span className="flex items-center gap-1">
-                                                                <Clock className="h-3 w-3" />
-                                                                {formatDate(s.updatedAt)}
-                                                            </span>
+                                        {sessions.map(s => {
+                                            const isActive = s.id === activeSessionId;
+                                            return (
+                                                <div
+                                                    key={s.id}
+                                                    onClick={() => handleLoadSession(s)}
+                                                    className={`group relative p-3 rounded-lg border cursor-pointer transition-all hover:bg-gray-50 hover:border-purple-200 ${isActive
+                                                        ? 'bg-purple-50 border-purple-200 ring-2 ring-purple-100'
+                                                        : 'bg-white border-gray-200'
+                                                        }`}
+                                                >
+                                                    {isActive && (
+                                                        <div className="absolute top-2 right-12 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                                                            Active
                                                         </div>
-                                                        {currentMessages.length > 0 && (
-                                                            <div className="flex items-start gap-2">
-                                                                {currentMessages[currentMessages.length - 1].role === 'user' ? (
-                                                                    <User className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
-                                                                ) : (
-                                                                    <Bot className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
-                                                                )}
-                                                                <p className="text-xs text-gray-600 line-clamp-2">
-                                                                    {currentMessages[currentMessages.length - 1].content.substring(0, 100)}
-                                                                    {currentMessages[currentMessages.length - 1].content.length > 100 && '...'}
-                                                                </p>
+                                                    )}
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2">{s.title}</h4>
+                                                            <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                                                                <span className="flex items-center gap-1">
+                                                                    <MessageSquare className="h-3 w-3" />
+                                                                    {s.messages.length} messages
+                                                                </span>
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {formatDate(s.updatedAt)}
+                                                                </span>
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                        <button
+                                                            onClick={e => handleDeleteSession(s.id, e)}
+                                                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all ml-2 flex-shrink-0"
+                                                            title="Delete conversation"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        onClick={e => handleDeleteSession(s.id, e)}
-                                                        className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all ml-2 flex-shrink-0"
-                                                        title="Delete conversation"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}

@@ -3,6 +3,7 @@ import { Settings, X, Edit3, Trash2, Plus, Check, Loader2, AlertTriangle } from 
 import { type AppSettings } from '../models';
 import { EditModal } from './edit-model'
 import { DeleteModal } from './delete-model';
+import { cleanApiResponse } from './chat-history';
 
 export const SettingsDrawer = ({
     isOpen,
@@ -44,7 +45,8 @@ export const SettingsDrawer = ({
             if (!response.ok) {
                 throw new Error('Failed to load configurations');
             }
-            const configs = await response.json();
+            const result = await response.json();
+            const configs = cleanApiResponse(result);
             setConfigurations(configs);
 
             const activeConfig = configs.find((config: AppSettings) => config.isActive);

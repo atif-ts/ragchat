@@ -32,14 +32,16 @@ public class ChatHistoryService : IChatHistoryService
 
     public async Task<List<ChatSession>> GetSessionsAsync(string userId) =>
         await _db.ChatSessions
+                 .AsNoTracking()
+                 .Include(s => s.Messages)
                  .Where(s => s.UserId == userId)
-                 .OrderByDescending(s => s.UpdatedAt)
+                 .OrderByDescending(s => s.UpdatedAt)                 
                  .ToListAsync();
 
     public async Task<ChatSession?> GetSessionAsync(Guid sessionId) =>
         await _db.ChatSessions
-                 .Include(s => s.Messages
-                               .OrderBy(m => m.Timestamp))
+               .AsNoTracking()
+                 .Include(s => s.Messages.OrderBy(m => m.Timestamp))
                  .FirstOrDefaultAsync(s => s.Id == sessionId);
 
     public async Task DeleteSessionAsync(Guid sessionId)

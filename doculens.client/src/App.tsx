@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import type { AppSettings, ChatMessage, ChatResponse } from './models';
 import { SettingsDrawer } from './components/drawer-setting';
-import { ChatHistoryDrawer } from './components/chat-history';
+import { ChatHistoryDrawer, cleanApiResponse } from './components/chat-history';
 import { FileText, Menu, Settings, History } from 'lucide-react';
 import { ChatArea } from './components/chat-area';
 
@@ -12,6 +12,8 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
     const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+    const [reload, setReload] = useState(0);
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null); // Track active session
 
     const [settings, setSettings] = useState<AppSettings>({
         documentPath: '',
@@ -57,15 +59,26 @@ export default function App() {
         setIsLoading(true);
 
         try {
+            const requestBody = {
+                question: inputMessage.trim(),
+                ...(activeSessionId && { sessionId: activeSessionId })
+            };
+
             const res = await fetch(`/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: inputMessage.trim() })
+                body: JSON.stringify(requestBody)
             });
 
             if (!res.ok) throw new Error(String(res.status));
 
-            const data: ChatResponse = await res.json();
+            const result: ChatResponse = await res.json();
+            const data = cleanApiResponse(result);
+
+            if (!activeSessionId && data.sessionId) {
+                setActiveSessionId(data.sessionId);
+            }
+
             const assistantMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
@@ -75,6 +88,8 @@ export default function App() {
             };
 
             setMessages(prev => [...prev, assistantMsg]);
+
+            setReload(prev => prev + 1);
         } catch (e) {
             const errorMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -96,13 +111,15 @@ export default function App() {
         }
     };
 
-    const handleLoadChatSession = (sessionMessages: ChatMessage[]) => {
+    const handleLoadChatSession = (sessionMessages: ChatMessage[], sessionId: string) => {
         setMessages(sessionMessages);
+        setActiveSessionId(sessionId);
     };
 
     const startNewChat = () => {
         setMessages([]);
         setInputMessage('');
+        setActiveSessionId(null);
     };
 
     return (
@@ -117,6 +134,8 @@ export default function App() {
                 onClose={() => setHistoryDrawerOpen(false)}
                 currentMessages={messages}
                 onLoadSession={handleLoadChatSession}
+                reload={reload}
+                activeSessionId={activeSessionId}
             />
 
             <div className="flex-1 flex flex-col">
@@ -157,6 +176,12 @@ export default function App() {
                             <div className="min-w-0 flex-1">
                                 <h1 className="text-xl font-semibold text-gray-800 truncate">
                                     {settings.appName ? `${settings.appName} Chat` : 'DocuLens Chat'}
+                                    {/* Show indicator if continuing an existing chat */}
+                                    {activeSessionId && (
+                                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                            Continuing Chat
+                                        </span>
+                                    )}
                                 </h1>
                                 <p className="text-sm text-gray-600 truncate">
                                     {settings.description || 'Ask questions about your documents'}
@@ -178,7 +203,7 @@ export default function App() {
 
                             {/* Chat History Button */}
                             <button
-                                onClick={() => setHistoryDrawerOpen(true)}
+                                onClick={() => { setHistoryDrawerOpen(true); setReload(r => r + 1); }}
                                 className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
                                 title="Chat History"
                             >

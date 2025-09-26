@@ -4,6 +4,7 @@ using DocuLens.Server.Models;
 using DocuLens.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +47,12 @@ builder.Services.AddEmbeddingGenerator(sp =>
     return cachedService.GetEmbeddingGenerator();
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+        .AddJsonOptions(opt =>
+        {
+            opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+            opt.JsonSerializerOptions.WriteIndented = false;
+        });
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("AllowReactApp", pol =>
