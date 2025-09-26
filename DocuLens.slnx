@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="doculens.client/doculens.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="DocuLens.Server/DocuLens.Server.csproj" />
+</Solution>
