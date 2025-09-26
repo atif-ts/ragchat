@@ -22,7 +22,7 @@ export const ChatMessageComponent = ({ message, isTyping }: { message: ChatMessa
 
             citations.push({
                 filename: filename,
-                fullPath: fullPath, // Store the complete file:/// URL
+                fullPath: fullPath,
                 page_number: match[2] ? parseInt(match[2]) : undefined,
                 text: match[3]
             });

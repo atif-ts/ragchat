@@ -22,6 +22,8 @@ export const SettingsDrawer = ({
     const [selectedConfig, setSelectedConfig] = useState<AppSettings | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
 
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+
     const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     useEffect(() => {
@@ -79,30 +81,56 @@ export const SettingsDrawer = ({
         }
     };
 
+    const handleNewConfiguration = () => {
+        setSelectedConfig(null);
+        setIsCreatingNew(true);
+        setEditModalOpen(true);
+    };
+
     const handleEdit = (config: AppSettings) => {
         setSelectedConfig(config);
+        setIsCreatingNew(false);
         setEditModalOpen(true);
     };
 
     const handleSaveEdit = async (editedConfig: AppSettings) => {
         try {
             setActionLoading(true);
-            const response = await fetch(`/api/configuration/${editedConfig.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editedConfig)
-            });
 
-            if (!response.ok) {
-                throw new Error('Failed to update configuration');
+            if (isCreatingNew) {
+                const response = await fetch('/api/configuration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editedConfig)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to create configuration');
+                }
+
+                showStatus('success', 'Configuration created successfully');
+            } else {
+                const response = await fetch(`/api/configuration/${editedConfig.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editedConfig)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update configuration');
+                }
+
+                showStatus('success', 'Configuration updated successfully');
             }
 
             setEditModalOpen(false);
             setSelectedConfig(null);
-            showStatus('success', 'Configuration updated successfully');
+            setIsCreatingNew(false);
             await loadConfigurations();
         } catch (err) {
-            showStatus('error', 'Failed to update configuration');
+            showStatus('error', err instanceof Error ? err.message : 'Operation failed');
             console.error(err);
         } finally {
             setActionLoading(false);
@@ -147,8 +175,8 @@ export const SettingsDrawer = ({
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
             )}
 
-            {/* Drawer */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-96 bg-white shadow-lg transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out flex flex-col`}>
+            {/* Drawer - Now opens from right side with double width (768px) */}
+            <div className={`fixed inset-y-0 right-0 z-50 w-[768px] bg-white shadow-lg transform ${isOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out flex flex-col`}>
                 {/* Header */}
                 <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center gap-2">
@@ -165,7 +193,7 @@ export const SettingsDrawer = ({
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-medium text-gray-900">Configurations</h3>
-                            <button className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                            <button onClick={handleNewConfiguration} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
                                 <Plus className="h-4 w-4" />
                                 New Configuration
                             </button>
@@ -280,6 +308,7 @@ export const SettingsDrawer = ({
                 configuration={selectedConfig}
                 onSave={handleSaveEdit}
                 isLoading={actionLoading}
+                isCreating={isCreatingNew}
             />
 
             <DeleteModal

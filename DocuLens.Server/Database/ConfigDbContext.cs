@@ -6,12 +6,26 @@ namespace DocuLens.Server.Database;
 public class ConfigDbContext : DbContext
 {
     public DbSet<ConfigurationDb> Configuration => Set<ConfigurationDb>();
+    public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+    public DbSet<ChatMessageDb> ChatMessages => Set<ChatMessageDb>();
 
     public ConfigDbContext(DbContextOptions<ConfigDbContext> opts) : base(opts) { }
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<ConfigurationDb>().HasKey(c => c.Id);
+
+        b.Entity<ChatSession>()
+         .HasMany(s => s.Messages)
+         .WithOne(m => m.Session)
+         .HasForeignKey(m => m.SessionId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<ChatSession>()
+         .HasIndex(s => s.UserId);
+
+        b.Entity<ChatMessageDb>()
+         .HasIndex(m => m.SessionId);
 
         var seedDateTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

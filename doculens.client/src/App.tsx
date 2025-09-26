@@ -2,14 +2,16 @@
 import { useState, useEffect } from 'react';
 import type { AppSettings, ChatMessage, ChatResponse } from './models';
 import { SettingsDrawer } from './components/drawer-setting';
-import { FileText, Menu, Settings } from 'lucide-react';
+import { ChatHistoryDrawer } from './components/chat-history';
+import { FileText, Menu, Settings, History } from 'lucide-react';
 import { ChatArea } from './components/chat-area';
 
 export default function App() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+    const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
 
     const [settings, setSettings] = useState<AppSettings>({
         documentPath: '',
@@ -19,12 +21,13 @@ export default function App() {
         apiKey: '',
         icon: '',
         appName: '',
-        description: ''
+        description: '',
+        configurationName: '',
+        createdAt: '',
+        id: 0,
+        isActive: false,
+        updatedAt: ''
     });
-    const [dirty, setDirty] = useState(false);
-    const [isConfigSaving, setIsConfigSaving] = useState(false);
-    const [configStatus, setConfigStatus] = useState('');
-    const [ingestionStatus, setIngestionStatus] = useState('');
 
     useEffect(() => { loadConfiguration(); }, []);
 
@@ -34,65 +37,9 @@ export default function App() {
             if (!res.ok) throw new Error('Config fetch failed');
             const cfg: AppSettings = await res.json();
             setSettings(cfg);
-            setDirty(false);
         } catch (e) {
             console.error(e);
-            setConfigStatus('Could not load configuration');
-            setTimeout(() => setConfigStatus(''), 5000);
         }
-    };
-
-    const saveConfiguration = async () => {
-        setIsConfigSaving(true);
-        setConfigStatus('');
-        try {
-            const res = await fetch(`/api/configuration`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
-            });
-            if (!res.ok) throw new Error(String(res.status));
-            setConfigStatus('Saved successfully');
-            setDirty(false);
-            setTimeout(() => setConfigStatus(''), 3000);
-        } catch (e) {
-            setConfigStatus(`Failed to save: ${e}`);
-            setTimeout(() => setConfigStatus(''), 5000);
-        } finally {
-            setIsConfigSaving(false);
-        }
-    };
-
-    const digestFolder = async () => {
-        if (!settings.documentPath.trim()) {
-            setIngestionStatus('Please enter a folder path first');
-            setTimeout(() => setIngestionStatus(''), 3000);
-            return;
-        }
-
-        setIngestionStatus('Starting document digestion…');
-        try {
-            const res = await fetch(`/api/configuration/trigger-ingestion`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documentPath: settings.documentPath })
-            });
-            if (res.status === 409) {
-                setIngestionStatus('Digestion already in progress');
-                return;
-            }
-            if (!res.ok) throw new Error(String(res.status));
-            setIngestionStatus('Document digestion started successfully');
-        } catch (e) {
-            setIngestionStatus(`Digestion failed: ${e}`);
-        } finally {
-            setTimeout(() => setIngestionStatus(''), 5000);
-        }
-    };
-
-    const updateSetting = (key: keyof AppSettings, value: string) => {
-        setSettings(prev => ({ ...prev, [key]: value }));
-        setDirty(true);
     };
 
     const sendMessage = async () => {
@@ -149,19 +96,27 @@ export default function App() {
         }
     };
 
+    const handleLoadChatSession = (sessionMessages: ChatMessage[]) => {
+        setMessages(sessionMessages);
+    };
+
+    const startNewChat = () => {
+        setMessages([]);
+        setInputMessage('');
+    };
+
     return (
         <div className="flex h-screen bg-gray-50">
             <SettingsDrawer
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                settings={settings}
-                onUpdateSetting={updateSetting}
-                onSaveConfiguration={saveConfiguration}
-                onDigestFolder={digestFolder}
-                dirty={dirty}
-                isConfigSaving={isConfigSaving}
-                configStatus={configStatus}
-                ingestionStatus={ingestionStatus}
+                isOpen={settingsDrawerOpen}
+                onClose={() => setSettingsDrawerOpen(false)}
+            />
+
+            <ChatHistoryDrawer
+                isOpen={historyDrawerOpen}
+                onClose={() => setHistoryDrawerOpen(false)}
+                currentMessages={messages}
+                onLoadSession={handleLoadChatSession}
             />
 
             <div className="flex-1 flex flex-col">
@@ -169,7 +124,7 @@ export default function App() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                onClick={() => setSettingsDrawerOpen(!settingsDrawerOpen)}
                                 className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                             >
                                 <Menu className="h-5 w-5" />
@@ -209,13 +164,36 @@ export default function App() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                            title="Open Settings"
-                        >
-                            <Settings className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* New Chat Button */}
+                            {messages.length > 0 && (
+                                <button
+                                    onClick={startNewChat}
+                                    className="flex-shrink-0 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                                    title="Start New Chat"
+                                >
+                                    New Chat
+                                </button>
+                            )}
+
+                            {/* Chat History Button */}
+                            <button
+                                onClick={() => setHistoryDrawerOpen(true)}
+                                className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                                title="Chat History"
+                            >
+                                <History className="h-5 w-5" />
+                            </button>
+
+                            {/* Settings Button */}
+                            <button
+                                onClick={() => setSettingsDrawerOpen(true)}
+                                className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                title="Open Settings"
+                            >
+                                <Settings className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 

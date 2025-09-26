@@ -33,3 +33,32 @@ export interface Citation {
     page_number?: number;
     text: string;
 }
+
+export interface ChatSessionDto {
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+    messageCount: number;
+}
+
+export interface ChatSessionFull {
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+    messages: {
+        id: string;
+        role: string;
+        content: string;
+        timestamp: string;
+    }[];
+}
+
+export interface ChatSession {
+    id: string;
+    title: string;
+    messages: ChatMessage[];
+    createdAt: Date;
+    updatedAt: Date;
+}

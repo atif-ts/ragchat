@@ -17,6 +17,7 @@ builder.Services.AddDbContextFactory<ConfigDbContext>(o => o.UseSqlite($"Data So
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
 
 builder.Services.AddSingleton<IConfigurationService, ConfigurationService>();
+builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
 
 var vectorPath = Path.Combine(AppContext.BaseDirectory, vectorDbFile);
 Directory.CreateDirectory(Path.GetDirectoryName(vectorPath)!);
