@@ -7,10 +7,7 @@ public class AppConfiguration
     public string Endpoint { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public string EmbeddingModel { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
-    public string Icon { get; set; } = string.Empty;
-    public string AppName { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;    
     public bool IsActive { get; set; } = false;
     public string ConfigurationName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -26,9 +23,6 @@ public class AppConfiguration
             Model = Model,
             EmbeddingModel = EmbeddingModel,
             ApiKey = ApiKey,
-            Icon = Icon,
-            AppName = AppName,
-            Description = Description,
             IsActive = IsActive,
             ConfigurationName = ConfigurationName,
             CreatedAt = CreatedAt,
@@ -45,9 +39,6 @@ public class AppConfiguration
         if (Model != other.Model) changes.Add(nameof(Model));
         if (EmbeddingModel != other.EmbeddingModel) changes.Add(nameof(EmbeddingModel));
         if (ApiKey != other.ApiKey) changes.Add(nameof(ApiKey));
-        if (Icon != other.Icon) changes.Add(nameof(Icon));
-        if (AppName != other.AppName) changes.Add(nameof(AppName));
-        if (Description != other.Description) changes.Add(nameof(Description));
         if (IsActive != other.IsActive) changes.Add(nameof(IsActive));
         if (ConfigurationName != other.ConfigurationName) changes.Add(nameof(ConfigurationName));
 

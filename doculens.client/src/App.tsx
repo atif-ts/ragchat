@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import type { AppSettings, ChatMessage, ChatResponse } from './models';
+import type { AppSettings, ApplicationInfo, ChatMessage, ChatResponse } from './models';
 import { SettingsDrawer } from './components/drawer-setting';
 import { ChatHistoryDrawer, cleanApiResponse } from './components/chat-history';
 import { FileText, Menu, Settings, History } from 'lucide-react';
@@ -13,7 +13,29 @@ export default function App() {
     const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
     const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
     const [reload, setReload] = useState(0);
-    const [activeSessionId, setActiveSessionId] = useState<string | null>(null); // Track active session
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+    const [appInfo, setAppInfo] = useState<ApplicationInfo>({
+        id: 1,
+        appName: '',
+        description: '',
+        icon: '',
+        createdAt: '',
+        updatedAt: ''
+    });
+
+    useEffect(() => { loadApplicationInfo(); }, []);
+
+    const loadApplicationInfo = async () => {
+        try {
+            const res = await fetch(`/api/applicationinfo`);
+            if (!res.ok) throw new Error('App info fetch failed');
+            const info: ApplicationInfo = await res.json();
+            setAppInfo(info);
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const [settings, setSettings] = useState<AppSettings>({
         documentPath: '',
@@ -21,9 +43,6 @@ export default function App() {
         model: '',
         embeddingModel: '',
         apiKey: '',
-        icon: '',
-        appName: '',
-        description: '',
         configurationName: '',
         createdAt: '',
         id: 0,
@@ -127,6 +146,7 @@ export default function App() {
             <SettingsDrawer
                 isOpen={settingsDrawerOpen}
                 onClose={() => setSettingsDrawerOpen(false)}
+                onAppInfoUpdate={loadApplicationInfo}
             />
 
             <ChatHistoryDrawer
@@ -150,10 +170,10 @@ export default function App() {
                             </button>
 
                             <div className="flex-shrink-0">
-                                {settings.icon ? (
+                                {appInfo.icon ? (
                                     <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
                                         <img
-                                            src={settings.icon}
+                                            src={appInfo.icon}
                                             alt="App Icon"
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
@@ -175,7 +195,7 @@ export default function App() {
 
                             <div className="min-w-0 flex-1">
                                 <h1 className="text-xl font-semibold text-gray-800 truncate">
-                                    {settings.appName ? `${settings.appName} Chat` : 'DocuLens Chat'}
+                                    {appInfo.appName ? `${appInfo.appName} Chat` : 'DocuLens Chat'}
                                     {/* Show indicator if continuing an existing chat */}
                                     {activeSessionId && (
                                         <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
@@ -184,7 +204,7 @@ export default function App() {
                                     )}
                                 </h1>
                                 <p className="text-sm text-gray-600 truncate">
-                                    {settings.description || 'Ask questions about your documents'}
+                                    {appInfo.description || 'Ask questions about your documents'}
                                 </p>
                             </div>
                         </div>

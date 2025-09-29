@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Edit3, X, Save, Loader2, Upload, Play, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit3, X, Save, Loader2, Play } from 'lucide-react';
 import { type AppSettings } from '../models';
 
 interface EditModalProps {
@@ -16,32 +15,24 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
     const [editedConfig, setEditedConfig] = useState<AppSettings | null>(null);
     const [isTriggering, setIsTriggering] = useState(false);
     const [triggerMessage, setTriggerMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [iconPreview, setIconPreview] = useState<string>('');
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (configuration) {
             setEditedConfig({ ...configuration });
-            setIconPreview(configuration.icon || '');
         } else if (isCreating && isOpen) {
-            // Initialize with default values for new configuration
             const defaultConfig: AppSettings = {
                 id: 0,
                 configurationName: '',
-                appName: 'DocuLens',
-                description: '',
                 documentPath: '',
                 endpoint: 'http://localhost:8000',
                 model: '',
                 embeddingModel: '',
                 apiKey: '',
-                icon: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 isActive: false
             };
             setEditedConfig(defaultConfig);
-            setIconPreview('');
         }
     }, [configuration, isCreating, isOpen]);
 
@@ -91,44 +82,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
         }
     };
 
-    const handleIconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setTriggerMessage({ type: 'error', message: 'Please select a valid image file' });
-            return;
-        }
-
-        if (file.size > 2 * 1024 * 1024) {
-            setTriggerMessage({ type: 'error', message: 'Image size must be less than 2MB' });
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64String = e.target?.result as string;
-            setIconPreview(base64String);
-            updateField('icon', base64String);
-        };
-        reader.onerror = () => {
-            setTriggerMessage({ type: 'error', message: 'Failed to read the image file' });
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleIconBrowse = () => {
-        fileInputRef.current?.click();
-    };
-
-    const removeIcon = () => {
-        setIconPreview('');
-        updateField('icon', '');
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
     if (!isOpen || !editedConfig) return null;
 
     return (
@@ -152,8 +105,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                     {triggerMessage && (
                         <div className={`p-3 rounded-lg border mb-4 ${triggerMessage.type === 'success'
-                                ? 'bg-green-50 border-green-200 text-green-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-red-50 border-red-200 text-red-800'
                             }`}>
                             <p className="text-sm font-medium">{triggerMessage.message}</p>
                         </div>
@@ -170,32 +123,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
                                 onChange={(e) => updateField('configurationName', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Enter configuration name"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                App Name
-                            </label>
-                            <input
-                                type="text"
-                                value={editedConfig.appName}
-                                onChange={(e) => updateField('appName', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="DocuLens"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                value={editedConfig.description}
-                                onChange={(e) => updateField('description', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="AI-powered document intelligence platform..."
-                                rows={3}
                             />
                         </div>
 
@@ -302,57 +229,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
                                 placeholder="sk-..."
                             />
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Application Icon
-                            </label>
-                            <div className="space-y-3">
-                                {iconPreview && (
-                                    <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                        <div className="w-16 h-16 flex items-center justify-center border border-gray-300 rounded-lg bg-white overflow-hidden">
-                                            <img
-                                                src={iconPreview}
-                                                alt="Icon preview"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-700">Icon Preview</p>
-                                            <p className="text-xs text-gray-500">Click "Browse" to change or "Remove" to delete</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={removeIcon}
-                                            className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleIconBrowse}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <Upload className="h-4 w-4" />
-                                        Browse Icon
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleIconUpload}
-                                        className="hidden"
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-500">
-                                    Select an image file (PNG, JPG, GIF, etc.). Maximum size: 2MB. The image will be converted to base64 format.
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -377,71 +253,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
                             <>
                                 <Save className="h-4 w-4" />
                                 {isCreating ? 'Create Configuration' : 'Save Changes'}
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// DeleteModal Component
-interface DeleteModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    configuration: AppSettings | null;
-    onConfirm: () => void;
-    isLoading: boolean;
-}
-
-const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, configuration, onConfirm, isLoading }) => {
-    if (!isOpen || !configuration) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">Delete Configuration</h2>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                <div className="p-6">
-                    <p className="text-gray-700 mb-4">
-                        Are you sure you want to delete the configuration "{configuration.configurationName}"?
-                        This action cannot be undone.
-                    </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={isLoading}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Deleting...
-                            </>
-                        ) : (
-                            <>
-                                <Trash2 className="h-4 w-4" />
-                                Delete
                             </>
                         )}
                     </button>

@@ -14,16 +14,22 @@ export interface ChatResponse {
 
 export interface AppSettings {
     id: number;
-    configurationName: string;
     documentPath: string;
     endpoint: string;
     model: string;
     embeddingModel: string;
     apiKey: string;
-    icon: string;
+    configurationName: string;
+    createdAt: string;
+    updatedAt: string;
+    isActive: boolean;
+}
+
+export interface ApplicationInfo {
+    id: number;
     appName: string;
     description: string;
-    isActive: boolean;
+    icon: string;
     createdAt: string;
     updatedAt: string;
 }

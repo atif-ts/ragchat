@@ -95,9 +95,6 @@ public class ConfigurationService : IConfigurationService
                 Model = configuration.Model,
                 EmbeddingModel = configuration.EmbeddingModel,
                 ApiKey = configuration.ApiKey,
-                Icon = configuration.Icon,
-                AppName = configuration.AppName,
-                Description = configuration.Description,
                 IsActive = false,
                 ConfigurationName = configuration.ConfigurationName,
                 CreatedAt = DateTime.UtcNow,
@@ -139,9 +136,6 @@ public class ConfigurationService : IConfigurationService
             cfg.Model = configuration.Model;
             cfg.EmbeddingModel = configuration.EmbeddingModel;
             cfg.ApiKey = configuration.ApiKey;
-            cfg.Icon = configuration.Icon;
-            cfg.AppName = configuration.AppName;
-            cfg.Description = configuration.Description;
             cfg.ConfigurationName = configuration.ConfigurationName;
             cfg.UpdatedAt = DateTime.UtcNow;
 
@@ -262,9 +256,6 @@ public class ConfigurationService : IConfigurationService
                 Model = string.Empty,
                 EmbeddingModel = string.Empty,
                 ApiKey = string.Empty,
-                Icon = string.Empty,
-                AppName = string.Empty,
-                Description = string.Empty,
                 IsActive = true,
                 ConfigurationName = "Default Configuration",
                 CreatedAt = DateTime.UtcNow,
@@ -284,9 +275,6 @@ public class ConfigurationService : IConfigurationService
             Model = cfg.Model,
             EmbeddingModel = cfg.EmbeddingModel,
             ApiKey = cfg.ApiKey,
-            Icon = cfg.Icon,
-            AppName = cfg.AppName,
-            Description = cfg.Description,
             IsActive = cfg.IsActive,
             ConfigurationName = cfg.ConfigurationName,
             CreatedAt = cfg.CreatedAt,

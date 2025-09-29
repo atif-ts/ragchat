@@ -17,6 +17,7 @@ Directory.CreateDirectory(Path.GetDirectoryName(configurationPath)!);
 builder.Services.AddDbContextFactory<ConfigDbContext>(o => o.UseSqlite($"Data Source={configurationPath}"), ServiceLifetime.Singleton);
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
 
+builder.Services.AddSingleton<IApplicationInfoService, ApplicationInfoService>();
 builder.Services.AddSingleton<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
 
