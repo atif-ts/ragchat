@@ -14,6 +14,7 @@ export interface ChatResponse {
 
 export interface AppSettings {
     id: number;
+    provider: string;
     documentPath: string;
     endpoint: string;
     model: string;

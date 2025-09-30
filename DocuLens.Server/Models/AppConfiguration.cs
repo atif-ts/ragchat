@@ -3,6 +3,7 @@
 public class AppConfiguration
 {
     public int Id { get; set; }
+    public string Provider { get; set; } = "Azure";
     public string DocumentPath { get; set; } = string.Empty;
     public string Endpoint { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
@@ -18,6 +19,7 @@ public class AppConfiguration
         return new AppConfiguration
         {
             Id = Id,
+            Provider = Provider,
             DocumentPath = DocumentPath,
             Endpoint = Endpoint,
             Model = Model,
@@ -34,6 +36,7 @@ public class AppConfiguration
     {
         var changes = new List<string>();
 
+        if (Provider != other.Provider) changes.Add(nameof(Provider));
         if (DocumentPath != other.DocumentPath) changes.Add(nameof(DocumentPath));
         if (Endpoint != other.Endpoint) changes.Add(nameof(Endpoint));
         if (Model != other.Model) changes.Add(nameof(Model));

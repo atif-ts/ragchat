@@ -22,9 +22,10 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
         } else if (isCreating && isOpen) {
             const defaultConfig: AppSettings = {
                 id: 0,
+                provider: '',
                 configurationName: '',
                 documentPath: '',
-                endpoint: 'http://localhost:8000',
+                endpoint: '',
                 model: '',
                 embeddingModel: '',
                 apiKey: '',
@@ -155,6 +156,21 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
                             <p className="text-xs text-gray-500 mt-1">
                                 Click "Ingest" to trigger document processing for this path
                             </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Provider *
+                            </label>
+                            <select
+                                value={editedConfig.provider || ''}
+                                onChange={(e) => updateField('provider', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select a provider...</option>
+                                <option value="Azure">Azure</option>
+                                <option value="Bedrock">Bedrock</option>
+                            </select>
                         </div>
 
                         <div>

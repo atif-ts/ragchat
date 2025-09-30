@@ -44,27 +44,8 @@ public class ConfigurationBackgroundService : BackgroundService
             if (e.ChangedProperties.Contains(nameof(AppConfiguration.DocumentPath)))
             {
                 var newPath = e.NewConfiguration.DocumentPath;
-                var oldPath = e.OldConfiguration.DocumentPath;
-
-                _logger.LogInformation("Document path changed from '{OldPath}' to '{NewPath}'", oldPath, newPath);
-
-                if (!string.IsNullOrWhiteSpace(newPath) && Directory.Exists(newPath))
-                {
-                    _logger.LogInformation("Triggering data ingestion for new path: {DocumentPath}", newPath);
-                    await _ingestionManager.TriggerIngestionAsync(newPath);
-                }
-                else
-                {
-                    _logger.LogWarning("New document path is invalid or doesn't exist: {DocumentPath}", newPath);
-                }
-            }
-
-            if (e.ChangedProperties.Contains(nameof(AppConfiguration.Model)) ||
-                e.ChangedProperties.Contains(nameof(AppConfiguration.EmbeddingModel)) ||
-                e.ChangedProperties.Contains(nameof(AppConfiguration.Endpoint)) ||
-                e.ChangedProperties.Contains(nameof(AppConfiguration.ApiKey)))
-            {
-                _logger.LogInformation("AI service configuration changed, services will use new settings on next request");
+                _logger.LogInformation("Triggering ingestion for new path: {DocumentPath}", newPath);
+                await _ingestionManager.TriggerIngestionAsync(newPath);
             }
         }
         catch (Exception ex)

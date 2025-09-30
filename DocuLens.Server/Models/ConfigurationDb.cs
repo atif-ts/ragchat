@@ -3,6 +3,7 @@
 public class ConfigurationDb
 {
     public int Id { get; set; }
+    public string Provider { get; set; } = "Azure";
     public string DocumentPath { get; set; } = string.Empty;
     public string Endpoint { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;

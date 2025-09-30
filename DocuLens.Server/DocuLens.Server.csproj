@@ -10,6 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="4.0.7" />
+    <PackageReference Include="AWSSDK.Extensions.Bedrock.MEAI" Version="4.0.3.3" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.7.5" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
       <Version>8.*-*</Version>
     </PackageReference>

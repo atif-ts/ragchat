@@ -1,6 +1,7 @@
 ﻿using DocuLens.Server.Database;
 using DocuLens.Server.Interfaces;
 using DocuLens.Server.Models;
+using DocuLens.Server.Providers;
 using DocuLens.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -17,9 +18,14 @@ Directory.CreateDirectory(Path.GetDirectoryName(configurationPath)!);
 builder.Services.AddDbContextFactory<ConfigDbContext>(o => o.UseSqlite($"Data Source={configurationPath}"), ServiceLifetime.Singleton);
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
 
+builder.Services.AddSingleton<AzureAIWrapper>();
+builder.Services.AddSingleton<BedrockWrapper>();
+
 builder.Services.AddSingleton<IApplicationInfoService, ApplicationInfoService>();
 builder.Services.AddSingleton<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
+builder.Services.AddSingleton<IChatClientFactory, AIProviderFactory>();
+builder.Services.AddSingleton<IEmbeddingGeneratorFactory, AIProviderFactory>();
 
 var vectorPath = Path.Combine(AppContext.BaseDirectory, vectorDbFile);
 Directory.CreateDirectory(Path.GetDirectoryName(vectorPath)!);
@@ -34,18 +40,22 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddSingleton<IIngestionManager, IngestionManager>();
 builder.Services.AddHostedService<ConfigurationBackgroundService>();
 
-builder.Services.AddSingleton<CachedAIClientService>();
-
 builder.Services.AddChatClient(sp =>
 {
-    var cachedService = sp.GetRequiredService<CachedAIClientService>();
-    return cachedService.GetChatClient();
+    var cfgSvc = sp.GetRequiredService<IConfigurationService>();
+    var cfg = cfgSvc.CurrentConfiguration;
+
+    var factory = sp.GetRequiredService<IChatClientFactory>();
+    return factory.CreateChatClient(cfg);
 });
 
 builder.Services.AddEmbeddingGenerator(sp =>
 {
-    var cachedService = sp.GetRequiredService<CachedAIClientService>();
-    return cachedService.GetEmbeddingGenerator();
+    var cfgSvc = sp.GetRequiredService<IConfigurationService>();
+    var cfg = cfgSvc.CurrentConfiguration;
+
+    var factory = sp.GetRequiredService<IEmbeddingGeneratorFactory>();
+    return factory.CreateEmbeddingGenerator(cfg);
 });
 
 builder.Services.AddControllers()

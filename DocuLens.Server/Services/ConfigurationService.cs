@@ -91,6 +91,7 @@ public class ConfigurationService : IConfigurationService
             var newConfig = new ConfigurationDb
             {
                 DocumentPath = configuration.DocumentPath,
+                Provider = configuration.Provider,
                 Endpoint = configuration.Endpoint,
                 Model = configuration.Model,
                 EmbeddingModel = configuration.EmbeddingModel,
@@ -132,6 +133,7 @@ public class ConfigurationService : IConfigurationService
             if (changed.Length == 0) return;
 
             cfg.DocumentPath = configuration.DocumentPath;
+            cfg.Provider = configuration.Provider;
             cfg.Endpoint = configuration.Endpoint;
             cfg.Model = configuration.Model;
             cfg.EmbeddingModel = configuration.EmbeddingModel;
@@ -198,7 +200,7 @@ public class ConfigurationService : IConfigurationService
             {
                 OldConfiguration = old,
                 NewConfiguration = newConfig,
-                ChangedProperties = new[] { "IsActive", "ApiKey", "Endpoint", "Model", "EmbeddingModel", "DocumentPath" }
+                ChangedProperties = new[] { "IsActive", "Provider", "ApiKey", "Endpoint", "Model", "EmbeddingModel", "DocumentPath" }
             });
         }
 
@@ -252,6 +254,7 @@ public class ConfigurationService : IConfigurationService
             _db.Configuration.Add(new ConfigurationDb
             {
                 DocumentPath = string.Empty,
+                Provider = string.Empty,
                 Endpoint = string.Empty,
                 Model = string.Empty,
                 EmbeddingModel = string.Empty,
@@ -270,6 +273,7 @@ public class ConfigurationService : IConfigurationService
         return new AppConfiguration
         {
             Id = cfg.Id,
+            Provider = cfg.Provider,
             DocumentPath = cfg.DocumentPath,
             Endpoint = cfg.Endpoint,
             Model = cfg.Model,
