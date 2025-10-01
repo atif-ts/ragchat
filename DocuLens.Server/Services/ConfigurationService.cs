@@ -1,18 +1,19 @@
 ﻿using DocuLens.Server.Database;
 using DocuLens.Server.Interfaces;
 using DocuLens.Server.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace DocuLens.Server.Services;
 
 public class ConfigurationService : IConfigurationService
 {
-    private readonly ConfigDbContext _db;
+    private readonly IDbContextFactory<ConfigDbContext> _dbFactory;
     private readonly object _lock = new();
     private AppConfiguration? _cachedActiveConfiguration;
 
-    public ConfigurationService(ConfigDbContext db)
+    public ConfigurationService(IDbContextFactory<ConfigDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         EnsureDefaultConfigurationExists();
     }
 
@@ -25,15 +26,16 @@ public class ConfigurationService : IConfigurationService
                 if (_cachedActiveConfiguration != null)
                     return _cachedActiveConfiguration;
 
-                var cfg = _db.Configuration.FirstOrDefault(c => c.IsActive);
+                using var db = _dbFactory.CreateDbContext();
+                var cfg = db.Configuration.FirstOrDefault(c => c.IsActive);
 
                 if (cfg == null)
                 {
-                    cfg = _db.Configuration.FirstOrDefault();
+                    cfg = db.Configuration.FirstOrDefault();
                     if (cfg != null)
                     {
                         cfg.IsActive = true;
-                        _db.SaveChanges();
+                        db.SaveChanges();
                     }
                     else
                     {
@@ -55,7 +57,8 @@ public class ConfigurationService : IConfigurationService
         {
             lock (_lock)
             {
-                return _db.Configuration
+                using var db = _dbFactory.CreateDbContext();
+                return db.Configuration
                     .OrderByDescending(c => c.IsActive)
                     .ThenBy(c => c.ConfigurationName)
                     .Select(MapToAppConfiguration)
@@ -70,7 +73,8 @@ public class ConfigurationService : IConfigurationService
         {
             lock (_lock)
             {
-                var cfg = _db.Configuration.Find(id);
+                using var db = _dbFactory.CreateDbContext();
+                var cfg = db.Configuration.Find(id);
                 return cfg != null ? MapToAppConfiguration(cfg) : null;
             }
         });
@@ -80,7 +84,9 @@ public class ConfigurationService : IConfigurationService
     {
         lock (_lock)
         {
-            var existingName = _db.Configuration
+            using var db = _dbFactory.CreateDbContext();
+
+            var existingName = db.Configuration
                 .Any(c => c.ConfigurationName == configuration.ConfigurationName);
 
             if (existingName)
@@ -102,8 +108,8 @@ public class ConfigurationService : IConfigurationService
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _db.Configuration.Add(newConfig);
-            _db.SaveChanges();
+            db.Configuration.Add(newConfig);
+            db.SaveChanges();
 
             return MapToAppConfiguration(newConfig);
         }
@@ -117,7 +123,9 @@ public class ConfigurationService : IConfigurationService
 
         lock (_lock)
         {
-            var cfg = _db.Configuration.Find(configuration.Id);
+            using var db = _dbFactory.CreateDbContext();
+
+            var cfg = db.Configuration.Find(configuration.Id);
             if (cfg == null)
             {
                 throw new ArgumentException($"Configuration with ID {configuration.Id} not found");
@@ -141,7 +149,7 @@ public class ConfigurationService : IConfigurationService
             cfg.ConfigurationName = configuration.ConfigurationName;
             cfg.UpdatedAt = DateTime.UtcNow;
 
-            _db.SaveChanges();
+            db.SaveChanges();
 
             if (wasActiveConfigurationChanged)
             {
@@ -170,17 +178,19 @@ public class ConfigurationService : IConfigurationService
 
         lock (_lock)
         {
-            var targetConfig = _db.Configuration.Find(configurationId);
+            using var db = _dbFactory.CreateDbContext();
+
+            var targetConfig = db.Configuration.Find(configurationId);
             if (targetConfig == null)
                 return false;
 
-            var currentActive = _db.Configuration.FirstOrDefault(c => c.IsActive);
+            var currentActive = db.Configuration.FirstOrDefault(c => c.IsActive);
             if (currentActive != null && currentActive.Id == configurationId)
                 return true;
 
             old = currentActive != null ? MapToAppConfiguration(currentActive) : null;
 
-            foreach (var config in _db.Configuration.Where(c => c.IsActive))
+            foreach (var config in db.Configuration.Where(c => c.IsActive))
             {
                 config.IsActive = false;
             }
@@ -188,7 +198,7 @@ public class ConfigurationService : IConfigurationService
             targetConfig.IsActive = true;
             targetConfig.UpdatedAt = DateTime.UtcNow;
 
-            _db.SaveChanges();
+            db.SaveChanges();
 
             _cachedActiveConfiguration = null;
             newConfig = CurrentConfiguration;
@@ -213,18 +223,20 @@ public class ConfigurationService : IConfigurationService
         {
             lock (_lock)
             {
-                var cfg = _db.Configuration.Find(id);
+                using var db = _dbFactory.CreateDbContext();
+
+                var cfg = db.Configuration.Find(id);
                 if (cfg == null)
                     return false;
 
-                if (cfg.IsActive && _db.Configuration.Count() == 1)
+                if (cfg.IsActive && db.Configuration.Count() == 1)
                 {
                     throw new InvalidOperationException("Cannot delete the only configuration");
                 }
 
                 if (cfg.IsActive)
                 {
-                    var nextActive = _db.Configuration
+                    var nextActive = db.Configuration
                         .Where(c => c.Id != id)
                         .FirstOrDefault();
 
@@ -235,8 +247,8 @@ public class ConfigurationService : IConfigurationService
                     }
                 }
 
-                _db.Configuration.Remove(cfg);
-                _db.SaveChanges();
+                db.Configuration.Remove(cfg);
+                db.SaveChanges();
 
                 _cachedActiveConfiguration = null;
 
@@ -249,9 +261,11 @@ public class ConfigurationService : IConfigurationService
     {
         lock (_lock)
         {
-            if (_db.Configuration.Any()) return;
+            using var db = _dbFactory.CreateDbContext();
 
-            _db.Configuration.Add(new ConfigurationDb
+            if (db.Configuration.Any()) return;
+
+            db.Configuration.Add(new ConfigurationDb
             {
                 DocumentPath = string.Empty,
                 Provider = string.Empty,
@@ -264,7 +278,7 @@ public class ConfigurationService : IConfigurationService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
-            _db.SaveChanges();
+            db.SaveChanges();
         }
     }
 

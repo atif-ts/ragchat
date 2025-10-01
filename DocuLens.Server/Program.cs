@@ -15,8 +15,10 @@ const string configurationDbFile = "configuration.db";
 var configurationPath = Path.Combine(AppContext.BaseDirectory, configurationDbFile);
 Directory.CreateDirectory(Path.GetDirectoryName(configurationPath)!);
 
-builder.Services.AddDbContextFactory<ConfigDbContext>(o => o.UseSqlite($"Data Source={configurationPath}"), ServiceLifetime.Singleton);
-builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
+builder.Services.AddDbContextFactory<ConfigDbContext>(
+    o => o.UseSqlite($"Data Source={configurationPath}"),
+    ServiceLifetime.Singleton);
+//builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
 
 builder.Services.AddSingleton<AzureAIWrapper>();
 builder.Services.AddSingleton<BedrockWrapper>();

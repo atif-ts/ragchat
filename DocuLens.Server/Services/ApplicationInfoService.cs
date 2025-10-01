@@ -1,18 +1,19 @@
 ﻿using DocuLens.Server.Database;
 using DocuLens.Server.Interfaces;
 using DocuLens.Server.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace DocuLens.Server.Services;
 
 public class ApplicationInfoService : IApplicationInfoService
 {
-    private readonly ConfigDbContext _db;
+    private readonly IDbContextFactory<ConfigDbContext> _dbFactory;
     private readonly object _lock = new();
     private ApplicationInfo? _cachedApplicationInfo;
 
-    public ApplicationInfoService(ConfigDbContext db)
+    public ApplicationInfoService(IDbContextFactory<ConfigDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         EnsureDefaultApplicationInfoExists();
     }
 
@@ -25,7 +26,8 @@ public class ApplicationInfoService : IApplicationInfoService
                 if (_cachedApplicationInfo != null)
                     return _cachedApplicationInfo;
 
-                var appInfo = _db.ApplicationInfo.FirstOrDefault();
+                using var db = _dbFactory.CreateDbContext();
+                var appInfo = db.ApplicationInfo.FirstOrDefault();
 
                 if (appInfo == null)
                 {
@@ -55,7 +57,9 @@ public class ApplicationInfoService : IApplicationInfoService
         {
             lock (_lock)
             {
-                var appInfo = _db.ApplicationInfo.Find(applicationInfo.Id);
+                using var db = _dbFactory.CreateDbContext();
+
+                var appInfo = db.ApplicationInfo.Find(applicationInfo.Id);
                 if (appInfo == null)
                 {
                     throw new ArgumentException($"Application info with ID {applicationInfo.Id} not found");
@@ -66,7 +70,7 @@ public class ApplicationInfoService : IApplicationInfoService
                 appInfo.Icon = applicationInfo.Icon;
                 appInfo.UpdatedAt = DateTime.UtcNow;
 
-                _db.SaveChanges();
+                db.SaveChanges();
 
                 _cachedApplicationInfo = null;
             }
@@ -77,9 +81,11 @@ public class ApplicationInfoService : IApplicationInfoService
     {
         lock (_lock)
         {
-            if (_db.ApplicationInfo.Any()) return;
+            using var db = _dbFactory.CreateDbContext();
 
-            _db.ApplicationInfo.Add(new ApplicationInfo
+            if (db.ApplicationInfo.Any()) return;
+
+            db.ApplicationInfo.Add(new ApplicationInfo
             {
                 AppName = "DocuLens",
                 Description = "Chat with your documents",
@@ -87,7 +93,7 @@ public class ApplicationInfoService : IApplicationInfoService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
-            _db.SaveChanges();
+            db.SaveChanges();
         }
     }
 }
