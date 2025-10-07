@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import type { AppSettings, ApplicationInfo, ChatMessage, ChatResponse } from './models';
 import { SettingsDrawer } from './components/drawer-setting';
 import { ChatHistoryDrawer, cleanApiResponse } from './components/chat-history';
-import { FileText, Menu, Settings, History } from 'lucide-react';
+import { FileText, Menu, Settings, History, Plus, Sparkles } from 'lucide-react';
 import { ChatArea } from './components/chat-area';
 
 export default function App() {
@@ -142,7 +142,7 @@ export default function App() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
             <SettingsDrawer
                 isOpen={settingsDrawerOpen}
                 onClose={() => setSettingsDrawerOpen(false)}
@@ -158,82 +158,87 @@ export default function App() {
                 activeSessionId={activeSessionId}
             />
 
-            <div className="flex-1 flex flex-col">
-                <div className="bg-white border-b border-gray-200 px-4 py-3">
+            <div className="flex-1 flex flex-col shadow-lg rounded-l-2xl bg-white overflow-hidden">
+                <div className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-100 px-6 py-4 shadow-sm">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setSettingsDrawerOpen(!settingsDrawerOpen)}
-                                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                className="lg:hidden p-2 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200"
                             >
                                 <Menu className="h-5 w-5" />
                             </button>
 
-                            <div className="flex-shrink-0">
-                                {appInfo.icon ? (
-                                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                                        <img
-                                            src={appInfo.icon}
-                                            alt="App Icon"
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                                const fallback = e.currentTarget.parentElement?.querySelector('.fallback-icon');
-                                                if (fallback) {
-                                                    fallback.classList.remove('hidden');
-                                                }
-                                            }}
-                                        />
-                                        <FileText className="fallback-icon hidden w-full h-full text-blue-600 p-1" />
-                                    </div>
-                                ) : (
-                                    <div className="w-8 h-8 flex items-center justify-center">
-                                        <FileText className="h-6 w-6 text-blue-600" />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                                <h1 className="text-xl font-semibold text-gray-800 truncate">
-                                    {appInfo.appName ? `${appInfo.appName} Chat` : 'DocuLens Chat'}
-                                    {/* Show indicator if continuing an existing chat */}
-                                    {activeSessionId && (
-                                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                            Continuing Chat
-                                        </span>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    {appInfo.icon ? (
+                                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-sm">
+                                            <img
+                                                src={appInfo.icon}
+                                                alt="App Icon"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                    const fallback = e.currentTarget.parentElement?.querySelector('.fallback-icon');
+                                                    if (fallback) {
+                                                        fallback.classList.remove('hidden');
+                                                    }
+                                                }}
+                                            />
+                                            <FileText className="fallback-icon hidden w-full h-full text-blue-600 p-2" />
+                                        </div>
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-gray-200 flex items-center justify-center shadow-sm">
+                                            <Sparkles className="h-5 w-5 text-blue-600" />
+                                        </div>
                                     )}
-                                </h1>
-                                <p className="text-sm text-gray-600 truncate">
-                                    {appInfo.description || 'Ask questions about your documents'}
-                                </p>
+                                </div>
+
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h1 className="text-xl font-bold text-gray-800 truncate">
+                                            {appInfo.appName ? `${appInfo.appName}` : 'DocuLens'}
+                                        </h1>
+                                        {activeSessionId && (
+                                            <span className="flex items-center gap-1.5 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                                                <div className="flex items-center justify-center">
+                                                    <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-ping" />
+                                                    <div className="h-1.5 w-1.5 bg-green-500 rounded-full absolute" />
+                                                </div>
+                                                Continuing Chat
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 truncate">
+                                        {appInfo.description || 'AI-powered document analysis and chat'}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {/* New Chat Button */}
                             {messages.length > 0 && (
                                 <button
                                     onClick={startNewChat}
-                                    className="flex-shrink-0 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer shadow-sm hover:shadow-md font-medium"
                                     title="Start New Chat"
                                 >
+                                    <Plus className="h-4 w-4" />
                                     New Chat
                                 </button>
                             )}
 
-                            {/* Chat History Button */}
                             <button
                                 onClick={() => { setHistoryDrawerOpen(true); setReload(r => r + 1); }}
-                                className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                                className="p-2.5 rounded-xl cursor-pointer text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-all duration-200 border border-transparent hover:border-purple-200"
                                 title="Chat History"
                             >
                                 <History className="h-5 w-5" />
                             </button>
 
-                            {/* Settings Button */}
                             <button
                                 onClick={() => setSettingsDrawerOpen(true)}
-                                className="flex-shrink-0 p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                className="p-2.5 rounded-xl cursor-pointer text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 border border-transparent hover:border-gray-200"
                                 title="Open Settings"
                             >
                                 <Settings className="h-5 w-5" />
