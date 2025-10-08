@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/doculens.client/obj/Debug
+/DocuLens.Server/bin/Debug/net8.0
+/DocuLens.Server/obj/Debug/net8.0
+/DocuLens.Server/obj
