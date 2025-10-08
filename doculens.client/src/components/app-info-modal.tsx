@@ -13,6 +13,7 @@ export const ApplicationInfoModal: React.FC<ApplicationInfoModalProps> = ({ isOp
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [iconPreview, setIconPreview] = useState<string>('');
+    const [emojiInput, setEmojiInput] = useState<string>('');
     const [errorMessage, setErrorMessage] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +40,12 @@ export const ApplicationInfoModal: React.FC<ApplicationInfoModalProps> = ({ isOp
             const data = await response.json();
             setAppInfo(data);
             setIconPreview(data.icon || '');
+            
+            if (data.icon && !data.icon.startsWith('data:image')) {
+                setEmojiInput(data.icon);
+            } else {
+                setEmojiInput('');
+            }
         } catch (err) {
             setErrorMessage('Failed to load application info');
             console.error(err);
@@ -99,6 +106,7 @@ export const ApplicationInfoModal: React.FC<ApplicationInfoModalProps> = ({ isOp
         reader.onload = (e) => {
             const base64String = e.target?.result as string;
             setIconPreview(base64String);
+            setEmojiInput('');
             updateField('icon', base64String);
             setErrorMessage('');
         };
@@ -114,7 +122,18 @@ export const ApplicationInfoModal: React.FC<ApplicationInfoModalProps> = ({ isOp
 
     const removeIcon = () => {
         setIconPreview('');
+        setEmojiInput('');
         updateField('icon', '');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleEmojiInputChange = (newValue: string) => {
+        setEmojiInput(newValue);
+        setIconPreview(newValue);
+        updateField('icon', newValue);
+        
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -267,17 +286,15 @@ export const ApplicationInfoModal: React.FC<ApplicationInfoModalProps> = ({ isOp
                                                 className="hidden"
                                             />
                                             <p className="text-xs text-gray-500">
-                                                Or enter an emoji (e.g., 📄, 🤖, 📚)
+                                                Or enter an emoji (e.g., 🤖, 😃, 💻)
                                             </p>
                                             <input
                                                 type="text"
-                                                value={!iconPreview.startsWith('data:image') ? iconPreview : ''}
-                                                onChange={(e) => {
-                                                    setIconPreview(e.target.value);
-                                                    updateField('icon', e.target.value);
-                                                }}
+                                                value={emojiInput}
+                                                onChange={(e) => handleEmojiInputChange(e.target.value)}
                                                 className="w-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                                                 placeholder="📄"
+                                                maxLength={2}
                                             />
                                         </div>
                                         <p className="text-xs text-gray-500">

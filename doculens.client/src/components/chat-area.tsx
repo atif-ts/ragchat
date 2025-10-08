@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef } from "react";
-import type { ChatMessage } from "../models";
+import type { ApplicationInfo, ChatMessage } from "../models";
 import { Send, Mic, MicOff, Sparkles, Zap } from "lucide-react";
 import { ChatMessageComponent } from "./chat-message";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
@@ -10,7 +10,8 @@ export const ChatArea = ({
     inputMessage,
     setInputMessage,
     onSendMessage,
-    onKeyPress
+    onKeyPress,
+    appInfo 
 }: {
     messages: ChatMessage[];
     isLoading: boolean;
@@ -18,6 +19,7 @@ export const ChatArea = ({
     setInputMessage: (message: string) => void;
     onSendMessage: () => void;
     onKeyPress: (e: React.KeyboardEvent) => void;
+    appInfo: ApplicationInfo;
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -84,16 +86,19 @@ export const ChatArea = ({
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
                         <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-gray-100">
-                            <Sparkles className="h-8 w-8 text-blue-600" />
+                            {appInfo.icon && !appInfo.icon.startsWith('data:image') ? (
+                                <span className="text-3xl">{appInfo.icon}</span>
+                            ) : (
+                                <Sparkles className="h-8 w-8 text-blue-600" />
+                            )}
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            Welcome to DocuLens AI
+                            Welcome to {appInfo.appName || 'DocuLens AI'}
                         </h2>
                         <p className="text-gray-600 text-lg mb-8 leading-relaxed">
                             Ask questions about your documents and get instant AI-powered answers with proper citations and sources.
                         </p>
-                        
-                        {/* Suggested Questions */}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mb-8">
                             {suggestedQuestions.map((question, index) => (
                                 <button

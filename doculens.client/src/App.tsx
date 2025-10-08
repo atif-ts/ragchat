@@ -172,19 +172,23 @@ export default function App() {
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     {appInfo.icon ? (
-                                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-sm">
-                                            <img
-                                                src={appInfo.icon}
-                                                alt="App Icon"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.currentTarget.style.display = 'none';
-                                                    const fallback = e.currentTarget.parentElement?.querySelector('.fallback-icon');
-                                                    if (fallback) {
-                                                        fallback.classList.remove('hidden');
-                                                    }
-                                                }}
-                                            />
+                                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-sm flex items-center justify-center">
+                                            {appInfo.icon.startsWith('data:image') ? (
+                                                <img
+                                                    src={appInfo.icon}
+                                                    alt="App Icon"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        const fallback = e.currentTarget.parentElement?.querySelector('.fallback-icon');
+                                                        if (fallback) {
+                                                            fallback.classList.remove('hidden');
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span className="text-xl">{appInfo.icon}</span>
+                                            )}
                                             <FileText className="fallback-icon hidden w-full h-full text-blue-600 p-2" />
                                         </div>
                                     ) : (
@@ -254,6 +258,7 @@ export default function App() {
                     setInputMessage={setInputMessage}
                     onSendMessage={sendMessage}
                     onKeyPress={handleKeyPress}
+                     appInfo={appInfo} 
                 />
             </div>
         </div>
