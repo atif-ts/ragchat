@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { History, X, MessageSquare, Trash2, Search, Calendar, User, Bot, Clock } from 'lucide-react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { History, X, MessageSquare, Trash2, Search, Calendar, Clock } from 'lucide-react';
 import type { ChatMessage, ChatSession, ChatSessionDto, ChatSessionFull } from '../models';
 
 interface RawApiResponse<T = any> {
@@ -111,6 +112,15 @@ const api = {
     },
 };
 
+interface ChatHistoryDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    currentMessages: ChatMessage[];
+    onLoadSession: (messages: ChatMessage[], sessionId: string) => void;
+    reload?: number;
+    activeSessionId?: string | null;
+}
+
 export const ChatHistoryDrawer = ({
     isOpen,
     onClose,
@@ -118,21 +128,40 @@ export const ChatHistoryDrawer = ({
     onLoadSession,
     reload,
     activeSessionId
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    currentMessages: ChatMessage[];
-    onLoadSession: (messages: ChatMessage[], sessionId: string) => void;
-    reload?: number;
-    activeSessionId?: string | null;
-}) => {
+}: ChatHistoryDrawerProps) => {
     const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const drawerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => { loadChatHistory(); }, [isOpen, reload]);
+    const handleClickOutside = useCallback((event: MouseEvent) => {
+        if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
+            onClose();
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, handleClickOutside]);
+
+    useEffect(() => { 
+        loadChatHistory(); 
+    }, [isOpen, reload]);
 
     const loadChatHistory = async () => {
+        if (!isOpen) return;
+        
         setLoading(true);
         try {
             const dto = await api.list();
@@ -210,29 +239,37 @@ export const ChatHistoryDrawer = ({
     return (
         <>
             {isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
+                <div 
+                    className="fixed inset-0 bg-gray-500/50 z-40 duration-300"
+                    onClick={onClose}
+                />
             )}
 
             <div
-                className={`fixed inset-y-0 left-0 z-50 w-96 bg-white shadow-lg transform ${isOpen ? 'translate-x-0' : '-translate-x-full'
-                    } transition-transform duration-300 ease-in-out flex flex-col border-r border-gray-200`}
+                ref={drawerRef}
+                className={`fixed inset-y-0 left-0 z-50 w-96 bg-white shadow-lg transform ${
+                    isOpen ? 'translate-x-0' : '-translate-x-full'
+                } transition-transform duration-300 ease-in-out flex flex-col border-r border-gray-200`}
             >
-                {/* Header */}
-                <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <History className="h-5 w-5 text-purple-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">Chat History</h2>
+                <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 bg-gradient-to-r from-white to-gray-50 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                            <History className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-800">Chat History</h2>
+                            <p className="text-xs text-gray-500">Your conversation timeline</p>
+                        </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                        className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 transform hover:scale-105"
                     >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                {/* Search */}
-                <div className="p-4 border-b border-gray-100">
+                <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
@@ -240,31 +277,37 @@ export const ChatHistoryDrawer = ({
                             placeholder="Search conversations..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm transition-all duration-200 bg-white shadow-sm"
                         />
                     </div>
                 </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto">
+                
+                <div className="flex-1 overflow-y-auto bg-gray-50/30">
                     {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
-                            <span className="ml-2 text-gray-600">Loading chat history...</span>
+                        <div className="flex flex-col items-center justify-center py-16">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mb-4" />
+                            <span className="text-gray-600 text-sm">Loading chat history...</span>
                         </div>
                     ) : Object.keys(grouped).length === 0 ? (
-                        <div className="text-center py-12 px-6">
-                            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Chat History</h3>
-                            <p className="text-gray-600 text-sm">
-                                {searchQuery ? 'No conversations match your search.' : 'Start a conversation to see your chat history here.'}
+                        <div className="text-center py-16 px-6">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <MessageSquare className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {searchQuery ? 'No matches found' : 'No Chat History'}
+                            </h3>
+                            <p className="text-gray-600 text-sm max-w-xs mx-auto">
+                                {searchQuery 
+                                    ? 'Try adjusting your search terms to find what you\'re looking for.' 
+                                    : 'Start a conversation to see your chat history here.'
+                                }
                             </p>
                         </div>
                     ) : (
                         <div className="p-4 space-y-6">
                             {Object.entries(grouped).map(([group, sessions]) => (
-                                <div key={group}>
-                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <div key={group} className="space-y-3">
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2 px-2">
                                         <Calendar className="h-3 w-3" />
                                         {group}
                                     </h3>
@@ -275,33 +318,35 @@ export const ChatHistoryDrawer = ({
                                                 <div
                                                     key={s.id}
                                                     onClick={() => handleLoadSession(s)}
-                                                    className={`group relative p-3 rounded-lg border cursor-pointer transition-all hover:bg-gray-50 hover:border-purple-200 ${isActive
-                                                        ? 'bg-purple-50 border-purple-200 ring-2 ring-purple-100'
-                                                        : 'bg-white border-gray-200'
-                                                        }`}
+                                                    className={`group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                                        isActive
+                                                            ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 ring-2 ring-purple-100 shadow-sm'
+                                                            : 'bg-white border-gray-200 hover:border-purple-200'
+                                                    }`}
                                                 >
-                                                    {isActive && (
-                                                        <div className="absolute top-2 right-12 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                                                            Active
-                                                        </div>
-                                                    )}
                                                     <div className="flex items-start justify-between">
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2">{s.title}</h4>
-                                                            <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                                                                <span className="flex items-center gap-1">
-                                                                    <MessageSquare className="h-3 w-3" />
-                                                                    {s.messages.length} messages
-                                                                </span>
-                                                                <span className="flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    {formatDate(s.updatedAt)}
-                                                                </span>
+                                                        <div className="flex-1 min-w-0 pr-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                {isActive && (
+                                                                    <div className="flex items-center gap-1.5 absolute top-2 right-2">
+                                                                        <div className="flex items-center justify-center">
+                                                                            <div className="h-2 w-2 bg-green-500 rounded-full animate-ping" />
+                                                                            <div className="h-2 w-2 bg-green-500 rounded-full absolute" />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2 leading-relaxed flex-1">
+                                                                    {s.title}
+                                                                </h4>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                                <Clock className="h-3 w-3" />
+                                                                <span>{formatDate(s.updatedAt)}</span>
                                                             </div>
                                                         </div>
                                                         <button
                                                             onClick={e => handleDeleteSession(s.id, e)}
-                                                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all ml-2 flex-shrink-0"
+                                                            className="opacity-0 group-hover:opacity-100 p-2 cursor-pointer rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 flex-shrink-0 ml-2"
                                                             title="Delete conversation"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -317,11 +362,15 @@ export const ChatHistoryDrawer = ({
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="border-t border-gray-200 p-4">
-                    <p className="text-xs text-gray-500 text-center">
-                        {filteredSessions.length} conversation{filteredSessions.length !== 1 ? 's' : ''}
-                    </p>
+                <div className="border-t border-gray-200 p-4 bg-white">
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>
+                            {filteredSessions.length} conversation{filteredSessions.length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-gray-400">
+                            Updated just now
+                        </span>
+                    </div>
                 </div>
             </div>
         </>
