@@ -1,6 +1,8 @@
 ﻿using DocuLens.Server.Interfaces;
 using DocuLens.Server.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel.Embeddings;
 
 namespace DocuLens.Server.Services;
 
@@ -8,7 +10,7 @@ public class DataIngestor(
     ILogger<DataIngestor> logger,
     VectorStoreCollection<string, IngestedChunk> chunksCollection,
     VectorStoreCollection<string, IngestedDocument> documentsCollection,
-    CachedAIClientService cachedAIClientService)
+    IEmbeddingGenerator<string, Embedding<float>> _embedGen)
 {
     public static async Task IngestDataAsync(IServiceProvider services, IIngestionSource source)
     {
@@ -43,7 +45,7 @@ public class DataIngestor(
 
             var newRecords = await source.CreateChunksForDocumentAsync(modifiedDocument);
 
-            var embeddingGenerator = cachedAIClientService.GetEmbeddingGenerator();
+            var embeddingGenerator = _embedGen.AsEmbeddingGenerationService();
             var chunksWithEmbeddings = new List<IngestedChunk>();
 
             foreach (var chunk in newRecords)

@@ -1,35 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Settings, X, Edit3, Trash2, Plus, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Settings, X, Edit3, Trash2, Plus, Check, Loader2, Info } from 'lucide-react';
 import { type AppSettings } from '../models';
-import { EditModal } from './edit-model'
+import { EditModal } from './edit-model';
 import { DeleteModal } from './delete-model';
+import { ApplicationInfoModal } from './app-info-modal';
+import { cleanApiResponse } from './chat-history';
 
 export const SettingsDrawer = ({
     isOpen,
-    onClose
+    onClose,
+    onAppInfoUpdate
 }: {
     isOpen: boolean;
     onClose: () => void;
+    onAppInfoUpdate?: () => void;
 }) => {
     const [configurations, setConfigurations] = useState<AppSettings[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [activeConfigId, setActiveConfigId] = useState<number | null>(null);
 
-    // Modal states
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [appInfoModalOpen, setAppInfoModalOpen] = useState(false);
     const [selectedConfig, setSelectedConfig] = useState<AppSettings | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
 
     const [isCreatingNew, setIsCreatingNew] = useState(false);
-
     const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
+            document.body.style.overflow = 'hidden';
             loadConfigurations();
+        } else {
+            document.body.style.overflow = 'unset';
         }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
     }, [isOpen]);
 
     const showStatus = (type: 'success' | 'error', message: string) => {
@@ -44,7 +54,8 @@ export const SettingsDrawer = ({
             if (!response.ok) {
                 throw new Error('Failed to load configurations');
             }
-            const configs = await response.json();
+            const result = await response.json();
+            const configs = cleanApiResponse(result);
             setConfigurations(configs);
 
             const activeConfig = configs.find((config: AppSettings) => config.isActive);
@@ -168,137 +179,184 @@ export const SettingsDrawer = ({
         }
     };
 
+    const handleAppInfoSaved = () => {
+        showStatus('success', 'Application info updated successfully');
+        if (onAppInfoUpdate) {
+            onAppInfoUpdate();
+        }
+    };
+
     return (
         <>
-            {/* Mobile Overlay */}
             {isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
+                <div className="fixed inset-0 bg-gray-500/50 z-40" onClick={onClose} />
             )}
 
-            {/* Drawer - Now opens from right side with double width (768px) */}
-            <div className={`fixed inset-y-0 right-0 z-50 w-[768px] bg-white shadow-lg transform ${isOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out flex flex-col`}>
-                {/* Header */}
-                <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <Settings className="h-5 w-5 text-blue-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">Configuration Manager</h2>
+            <div className={`fixed inset-y-0 right-0 z-50 w-[768px] bg-white border-l border-gray-200 shadow-lg transform ${isOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out flex flex-col`}>
+                <div className="flex items-center justify-between py-3 px-5 border-b bg-gray-50 border-gray-300">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 rounded">
+                            <Settings className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-medium text-gray-900">Settings Manager</h2>
+                            <p className="text-sm text-gray-500 mt-0.5">Manage API configurations and app info</p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-                        <X className="h-5 w-5" />
+                    <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded transition-colors cursor-pointer">
+                        <X className="h-5 w-5 text-gray-500" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-medium text-gray-900">Configurations</h3>
-                            <button onClick={handleNewConfiguration} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
-                                <Plus className="h-4 w-4" />
-                                New Configuration
-                            </button>
+                <div className="flex-1 overflow-y-auto bg-gray-100">
+                    <div className="p-4 space-y-3">
+                        {statusMessage && (
+                            <div className={`p-4 rounded border text-base ${statusMessage.type === 'success'
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : 'bg-red-50 border-red-200 text-red-700'
+                            }`}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${statusMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    {statusMessage.message}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-lg p-5 border border-gray-200">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-purple-50 rounded border border-purple-100">
+                                    <Info className="h-5 w-5 text-purple-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-medium text-gray-900">Application Information</h3>
+                                    <p className="text-sm text-gray-500">Configure name, description, and icon</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <p className="text-base text-gray-600">
+                                    Customize how your application appears in the interface
+                                </p>
+                                <button
+                                    onClick={() => setAppInfoModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-600 w-20 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-500 text-base cursor-pointer"
+                                >
+                                    <Info className="h-4 w-4" />
+                                    Edit
+                                </button>
+                            </div>
                         </div>
 
-                        {statusMessage && (
-                            <div className={`p-3 rounded-lg border mb-4 ${statusMessage.type === 'success'
-                                ? 'bg-green-50 border-green-200 text-green-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                                }`}>
-                                <p className="text-sm font-medium">{statusMessage.message}</p>
+                        <div className="bg-white rounded-lg p-5 border border-gray-200">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                                    <Settings className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-medium text-gray-900">API Configurations</h3>
+                                    <p className="text-sm text-gray-500">Manage your API setups</p>
+                                </div>
                             </div>
-                        )}
 
-                        {loading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                                <span className="ml-2 text-gray-600">Loading configurations...</span>
-                            </div>
-                        ) : error ? (
-                            <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-red-700 font-medium">{error}</p>
-                                <button
-                                    onClick={loadConfigurations}
-                                    className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                                >
-                                    Retry
-                                </button>
-                            </div>
-                        ) : configurations.length === 0 ? (
-                            <div className="text-center py-12">
-                                <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">No Configurations Found</h3>
-                                <p className="text-gray-600 mb-4 text-sm">Create your first configuration to get started.</p>
-                                <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-base text-gray-600">
+                                    Create and manage multiple configurations
+                                </p>
+                                <button onClick={handleNewConfiguration} className="inline-flex items-center gap-2 px-2.5 py-1.5 w-20 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-base cursor-pointer">
                                     <Plus className="h-4 w-4" />
-                                    Create Configuration
+                                    New
                                 </button>
                             </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {configurations.map((config) => (
-                                    <div key={config.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <input
-                                                    type="radio"
-                                                    checked={activeConfigId === config.id}
-                                                    onChange={() => handleActivate(config.id)}
-                                                    disabled={actionLoading}
-                                                    className="h-4 w-4 text-blue-600"
-                                                />
 
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h4 className="font-medium text-gray-900 truncate">
-                                                            {config.configurationName}
-                                                        </h4>
-                                                        {activeConfigId === config.id && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                                                <Check className="h-3 w-3" />
-                                                                Active
-                                                            </span>
-                                                        )}
+                            {loading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                    <span className="ml-3 text-base text-gray-600">Loading configurations...</span>
+                                </div>
+                            ) : error ? (
+                                <div className="p-5 bg-red-50 border border-red-200 rounded text-base text-red-700">
+                                    <p className="font-medium mb-3">{error}</p>
+                                    <button
+                                        onClick={loadConfigurations}
+                                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-base cursor-pointer"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            ) : configurations.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Configurations</h3>
+                                    <p className="text-base text-gray-600 mb-4">Create your first configuration</p>
+                                    <button onClick={handleNewConfiguration} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base cursor-pointer">
+                                        <Plus className="h-4 w-4" />
+                                        Create
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {configurations.map((config) => (
+                                        <div key={config.id} className="border border-gray-200 rounded p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                    <input
+                                                        type="radio"
+                                                        checked={activeConfigId === config.id}
+                                                        onChange={() => handleActivate(config.id)}
+                                                        disabled={actionLoading}
+                                                        className="h-5 w-5 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                    />
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h4 className="text-base font-medium text-gray-900 truncate">
+                                                                {config.configurationName}
+                                                            </h4>
+                                                            {activeConfigId === config.id && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                                                    <Check className="h-4 w-4" />
+                                                                    Active
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600 space-y-1">
+                                                            <p><span className="font-medium">Model:</span> {config.model || 'Not specified'}</p>
+                                                            <p className="truncate"><span className="font-medium">Path:</span> {config.documentPath || 'Not specified'}</p>
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 mt-2">
+                                                            Created: {new Date(config.createdAt).toLocaleDateString()}
+                                                        </p>
                                                     </div>
-                                                    <div className="text-sm text-gray-600 space-y-1">
-                                                        <p><span className="font-medium">App:</span> {config.appName || 'DocuLens'}</p>
-                                                        <p><span className="font-medium">Model:</span> {config.model || 'Not specified'}</p>
-                                                        <p className="truncate"><span className="font-medium">Path:</span> {config.documentPath || 'Not specified'}</p>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 mt-2">
-                                                        Created: {new Date(config.createdAt).toLocaleDateString()}
-                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 ml-3">
+                                                    <button
+                                                        onClick={() => handleEdit(config)}
+                                                        disabled={actionLoading}
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-md cursor-pointer"
+                                                        title="Edit configuration"
+                                                    >
+                                                        <Edit3 className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleDelete(config)}
+                                                        disabled={actionLoading || activeConfigId === config.id}
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md disabled:opacity-50 cursor-not-allowed"
+                                                        title={activeConfigId === config.id ? "Cannot delete active configuration" : "Delete configuration"}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 </div>
                                             </div>
-
-                                            <div className="flex items-center gap-1 ml-2">
-                                                <button
-                                                    onClick={() => handleEdit(config)}
-                                                    disabled={actionLoading}
-                                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
-                                                    title="Edit configuration"
-                                                >
-                                                    <Edit3 className="h-4 w-4" />
-                                                </button>
-
-                                                <button
-                                                    onClick={() => handleDelete(config)}
-                                                    disabled={actionLoading || activeConfigId === config.id}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md disabled:opacity-50"
-                                                    title={activeConfigId === config.id ? "Cannot delete active configuration" : "Delete configuration"}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Modals */}
             <EditModal
                 isOpen={editModalOpen}
                 onClose={() => {
@@ -320,6 +378,12 @@ export const SettingsDrawer = ({
                 configuration={selectedConfig}
                 onConfirm={handleConfirmDelete}
                 isLoading={actionLoading}
+            />
+
+            <ApplicationInfoModal
+                isOpen={appInfoModalOpen}
+                onClose={() => setAppInfoModalOpen(false)}
+                onSave={handleAppInfoSaved}
             />
         </>
     );

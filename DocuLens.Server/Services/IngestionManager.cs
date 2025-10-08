@@ -1,24 +1,20 @@
 ﻿using DocuLens.Server.Ingestion;
 using DocuLens.Server.Interfaces;
-using Microsoft.Extensions.AI;
 
 namespace DocuLens.Server.Services;
 
 public class IngestionManager : IIngestionManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly CachedAIClientService _cachedAIClientService;
     private readonly ILogger<IngestionManager> _logger;
     private readonly SemaphoreSlim _semaphore;
     private volatile bool _isIngestionInProgress;
 
     public IngestionManager(
         IServiceProvider serviceProvider,
-        CachedAIClientService cachedAIClientService,
         ILogger<IngestionManager> logger)
     {
         _serviceProvider = serviceProvider;
-        _cachedAIClientService = cachedAIClientService;
         _logger = logger;
         _semaphore = new SemaphoreSlim(1, 1);
         _isIngestionInProgress = false;
@@ -50,8 +46,6 @@ public class IngestionManager : IIngestionManager
                 _logger.LogWarning("Document path does not exist: {DocumentPath}", documentPath);
                 return;
             }
-
-            var embed = _cachedAIClientService.GetEmbeddingGenerator();
 
             var documentSource = new DocumentDirectorySource(documentPath);
             await DataIngestor.IngestDataAsync(_serviceProvider, documentSource);

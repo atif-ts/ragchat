@@ -9,7 +9,7 @@ namespace DocuLens.Server.Services;
 public class ChatService : IChatService
 {
     private readonly SemanticSearch _search;
-    private readonly CachedAIClientService _cachedAIClientService;
+    private readonly IChatClient _chatClient;
 
     private const string SystemPrompt = @"
         You are an assistant who answers questions about information you retrieve.
@@ -27,9 +27,9 @@ public class ChatService : IChatService
         Don't refer to the presence of citations; just emit these tags right at the end, with no surrounding text.
         ";
 
-    public ChatService(CachedAIClientService cachedAIClientService, SemanticSearch search)
+    public ChatService(IChatClient chatClient, SemanticSearch search)
     {
-        _cachedAIClientService = cachedAIClientService;
+        _chatClient = chatClient;
         _search = search;
     }
 
@@ -54,10 +54,8 @@ public class ChatService : IChatService
             new(ChatRole.User, $"Context:\n{context}\n\nQuestion: {request.Question}")
         };
 
-        var chatClient = _cachedAIClientService.GetChatClient();
-
         var reply = new StringBuilder();
-        await foreach (var delta in chatClient.GetStreamingResponseAsync(messages))
+        await foreach (var delta in _chatClient.GetStreamingResponseAsync(messages))
             if (delta.Text != null) reply.Append(delta.Text);
 
         var answer = reply.ToString();

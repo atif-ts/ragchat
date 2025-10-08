@@ -3,14 +3,12 @@
 public class AppConfiguration
 {
     public int Id { get; set; }
+    public string Provider { get; set; } = "Azure";
     public string DocumentPath { get; set; } = string.Empty;
     public string Endpoint { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public string EmbeddingModel { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
-    public string Icon { get; set; } = string.Empty;
-    public string AppName { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;    
     public bool IsActive { get; set; } = false;
     public string ConfigurationName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -21,14 +19,12 @@ public class AppConfiguration
         return new AppConfiguration
         {
             Id = Id,
+            Provider = Provider,
             DocumentPath = DocumentPath,
             Endpoint = Endpoint,
             Model = Model,
             EmbeddingModel = EmbeddingModel,
             ApiKey = ApiKey,
-            Icon = Icon,
-            AppName = AppName,
-            Description = Description,
             IsActive = IsActive,
             ConfigurationName = ConfigurationName,
             CreatedAt = CreatedAt,
@@ -40,14 +36,12 @@ public class AppConfiguration
     {
         var changes = new List<string>();
 
+        if (Provider != other.Provider) changes.Add(nameof(Provider));
         if (DocumentPath != other.DocumentPath) changes.Add(nameof(DocumentPath));
         if (Endpoint != other.Endpoint) changes.Add(nameof(Endpoint));
         if (Model != other.Model) changes.Add(nameof(Model));
         if (EmbeddingModel != other.EmbeddingModel) changes.Add(nameof(EmbeddingModel));
         if (ApiKey != other.ApiKey) changes.Add(nameof(ApiKey));
-        if (Icon != other.Icon) changes.Add(nameof(Icon));
-        if (AppName != other.AppName) changes.Add(nameof(AppName));
-        if (Description != other.Description) changes.Add(nameof(Description));
         if (IsActive != other.IsActive) changes.Add(nameof(IsActive));
         if (ConfigurationName != other.ConfigurationName) changes.Add(nameof(ConfigurationName));
 

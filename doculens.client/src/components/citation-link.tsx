@@ -1,9 +1,19 @@
-import { Download, FileText } from "lucide-react";
+import { useState } from 'react';
+import { Download, FileText, Eye } from "lucide-react";
 import type { Citation } from "../models";
+import { DocumentViewerDialog } from './document-viewer-dialog';
 
 export const CitationLink = ({ citation }: { citation: Citation }) => {
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+    const handleView = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsViewerOpen(true);
+    };
+
     const handleDownload = async (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
 
         try {
             const filePath = citation.fullPath?.replace('file:///', '') || citation.filename;
@@ -60,23 +70,41 @@ export const CitationLink = ({ citation }: { citation: Citation }) => {
     };
 
     return (
-        <button
-            onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md border border-blue-200 transition-colors group"
-            title={`Download: ${citation.filename}${citation.page_number ? ` (Page ${citation.page_number})` : ''}`}
-        >
-            <div className="flex items-center gap-1">
-                {getFileIcon(citation.filename)}
-                <span className="font-medium">
-                    {formatFilename(citation.filename)}
-                </span>
-                {citation.page_number && (
-                    <span className="text-blue-500">
-                        p.{citation.page_number}
-                    </span>
-                )}
+        <>
+            <div className="inline-flex items-center gap-1 bg-blue-50 rounded-md border border-blue-200">
+                <button
+                    onClick={handleView}
+                    className="inline-flex items-center gap-1.5 px-2 py-1 text-xs hover:bg-blue-100 text-blue-700 transition-colors rounded-l-md"
+                    title={`View: ${citation.filename}${citation.page_number ? ` (Page ${citation.page_number})` : ''}`}
+                >
+                    <div className="flex items-center gap-1">
+                        {getFileIcon(citation.filename)}
+                        <span className="font-medium">
+                            {formatFilename(citation.filename)}
+                        </span>
+                        {citation.page_number && (
+                            <span className="text-blue-500">
+                                p.{citation.page_number}
+                            </span>
+                        )}
+                    </div>
+                    <Eye className="h-3 w-3 opacity-60" />
+                </button>
+
+                <button
+                    onClick={handleDownload}
+                    className="px-2 py-1 hover:bg-blue-100 text-blue-700 transition-colors rounded-r-md border-l border-blue-200"
+                    title="Download file"
+                >
+                    <Download className="h-3 w-3" />
+                </button>
             </div>
-            <Download className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
-        </button>
+
+            <DocumentViewerDialog
+                isOpen={isViewerOpen}
+                onClose={() => setIsViewerOpen(false)}
+                citation={citation}
+            />
+        </>
     );
 };

@@ -3,14 +3,14 @@
     "Name": "New Profile",
     "Projects": [
       {
-        "Path": "DocuLens.Server\\DocuLens.Server.csproj",
-        "Action": "Start",
-        "DebugTarget": "https"
-      },
-      {
         "Path": "doculens.client\\doculens.client.esproj",
         "Action": "Start",
         "DebugTarget": "localhost (Edge)"
+      },
+      {
+        "Path": "DocuLens.Server\\DocuLens.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
       }
     ]
   }

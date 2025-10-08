@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Edit3, X, Save, Loader2, Upload, Play, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit3, X, Save, Loader2, Play, Server, Cpu, FileText, Key } from 'lucide-react';
 import { type AppSettings } from '../models';
 
 interface EditModalProps {
@@ -16,32 +15,37 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
     const [editedConfig, setEditedConfig] = useState<AppSettings | null>(null);
     const [isTriggering, setIsTriggering] = useState(false);
     const [triggerMessage, setTriggerMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [iconPreview, setIconPreview] = useState<string>('');
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         if (configuration) {
             setEditedConfig({ ...configuration });
-            setIconPreview(configuration.icon || '');
         } else if (isCreating && isOpen) {
-            // Initialize with default values for new configuration
             const defaultConfig: AppSettings = {
                 id: 0,
+                provider: '',
                 configurationName: '',
-                appName: 'DocuLens',
-                description: '',
                 documentPath: '',
-                endpoint: 'http://localhost:8000',
+                endpoint: '',
                 model: '',
                 embeddingModel: '',
                 apiKey: '',
-                icon: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 isActive: false
             };
             setEditedConfig(defaultConfig);
-            setIconPreview('');
         }
     }, [configuration, isCreating, isOpen]);
 
@@ -91,360 +95,248 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
         }
     };
 
-    const handleIconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setTriggerMessage({ type: 'error', message: 'Please select a valid image file' });
-            return;
-        }
-
-        if (file.size > 2 * 1024 * 1024) {
-            setTriggerMessage({ type: 'error', message: 'Image size must be less than 2MB' });
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64String = e.target?.result as string;
-            setIconPreview(base64String);
-            updateField('icon', base64String);
-        };
-        reader.onerror = () => {
-            setTriggerMessage({ type: 'error', message: 'Failed to read the image file' });
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleIconBrowse = () => {
-        fileInputRef.current?.click();
-    };
-
-    const removeIcon = () => {
-        setIconPreview('');
-        updateField('icon', '');
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
     if (!isOpen || !editedConfig) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                        <Edit3 className="h-5 w-5 text-blue-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">
-                            {isCreating ? 'Create New Configuration' : 'Edit Configuration'}
-                        </h2>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                    {triggerMessage && (
-                        <div className={`p-3 rounded-lg border mb-4 ${triggerMessage.type === 'success'
-                                ? 'bg-green-50 border-green-200 text-green-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                            }`}>
-                            <p className="text-sm font-medium">{triggerMessage.message}</p>
+        <div className="fixed inset-0 bg-gray-500/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-md border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between py-2.5 px-4 border-b bg-gray-50 border-gray-300">
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-blue-50 rounded">
+                            <Edit3 className="h-4 w-4 text-blue-600" />
                         </div>
-                    )}
-
-                    <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Configuration Name *
-                            </label>
-                            <input
-                                type="text"
-                                value={editedConfig.configurationName}
-                                onChange={(e) => updateField('configurationName', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter configuration name"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                App Name
-                            </label>
-                            <input
-                                type="text"
-                                value={editedConfig.appName}
-                                onChange={(e) => updateField('appName', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="DocuLens"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                value={editedConfig.description}
-                                onChange={(e) => updateField('description', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="AI-powered document intelligence platform..."
-                                rows={3}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Document Path
-                            </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={editedConfig.documentPath}
-                                    onChange={(e) => updateField('documentPath', e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="/path/to/documents"
-                                />
-                                <button
-                                    onClick={triggerDigestion}
-                                    disabled={isTriggering || !editedConfig.documentPath?.trim()}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    title="Trigger document ingestion"
-                                >
-                                    {isTriggering ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Play className="h-4 w-4" />
-                                    )}
-                                    {isTriggering ? 'Processing...' : 'Ingest'}
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                Click "Ingest" to trigger document processing for this path
+                            <h2 className="text-base font-medium text-gray-900">
+                                {isCreating ? 'New Configuration' : 'Edit Configuration'}
+                            </h2>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                Configure your AI service settings
                             </p>
                         </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 hover:bg-gray-50 rounded transition-colors"
+                    >
+                        <X className="h-4 w-4 text-gray-500" />
+                    </button>
+                </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                API Endpoint
-                            </label>
-                            <input
-                                type="text"
-                                value={editedConfig.endpoint}
-                                onChange={(e) => updateField('endpoint', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="http://localhost:8000"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Language Model
-                                </label>
-                                <select
-                                    value={editedConfig.model}
-                                    onChange={(e) => updateField('model', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">Select a model...</option>
-                                    <optgroup label="OpenAI GPT Models">
-                                        <option value="gpt-4">GPT-4</option>
-                                        <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    </optgroup>
-                                    <optgroup label="Anthropic Claude Models">
-                                        <option value="claude-3-opus">Claude 3 Opus</option>
-                                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                                        <option value="claude-3-haiku">Claude 3 Haiku</option>
-                                    </optgroup>
-                                </select>
+                <div className="flex-1 overflow-y-auto bg-gray-100">
+                    <div className="p-3 ">
+                        {triggerMessage && (
+                            <div className={`p-3 rounded border text-sm mb-4 ${triggerMessage.type === 'success'
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : 'bg-red-50 border-red-200 text-red-700'
+                                }`}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${triggerMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    {triggerMessage.message}
+                                </div>
                             </div>
+                        )}
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Embedding Model
-                                </label>
-                                <select
-                                    value={editedConfig.embeddingModel}
-                                    onChange={(e) => updateField('embeddingModel', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">Select an embedding model...</option>
-                                    <optgroup label="OpenAI Embeddings">
-                                        <option value="text-embedding-ada-002">text-embedding-ada-002</option>
-                                        <option value="text-embedding-3-small">text-embedding-3-small</option>
-                                        <option value="text-embedding-3-large">text-embedding-3-large</option>
-                                    </optgroup>
-                                    <optgroup label="Open Source">
-                                        <option value="sentence-transformers">sentence-transformers</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                        </div>
+                        <div className="space-y-2">
+                            <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-1.5 bg-blue-50 rounded border border-blue-100">
+                                        <Server className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900">Service Configuration</h3>
+                                        <p className="text-xs text-gray-500">Core service settings</p>
+                                    </div>
+                                </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                API Key
-                            </label>
-                            <input
-                                type="password"
-                                value={editedConfig.apiKey}
-                                onChange={(e) => updateField('apiKey', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="sk-..."
-                            />
-                        </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-normal text-gray-700 mb-2">
+                                            Configuration Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editedConfig.configurationName}
+                                            onChange={(e) => updateField('configurationName', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Production Configuration"
+                                        />
+                                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Application Icon
-                            </label>
-                            <div className="space-y-3">
-                                {iconPreview && (
-                                    <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                        <div className="w-16 h-16 flex items-center justify-center border border-gray-300 rounded-lg bg-white overflow-hidden">
-                                            <img
-                                                src={iconPreview}
-                                                alt="Icon preview"
-                                                className="w-full h-full object-contain"
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-normal text-gray-700 mb-2">
+                                                Provider
+                                            </label>
+                                            <select
+                                                value={editedConfig.provider || ''}
+                                                onChange={(e) => updateField('provider', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            >
+                                                <option value="">Select provider</option>
+                                                <option value="Azure">Azure</option>
+                                                <option value="Bedrock">Bedrock</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-normal text-gray-700 mb-2">
+                                                API Endpoint
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editedConfig.endpoint}
+                                                onChange={(e) => updateField('endpoint', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="http://localhost:8000"
                                             />
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-700">Icon Preview</p>
-                                            <p className="text-xs text-gray-500">Click "Browse" to change or "Remove" to delete</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={removeIcon}
-                                            className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                                        >
-                                            Remove
-                                        </button>
                                     </div>
-                                )}
 
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleIconBrowse}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <Upload className="h-4 w-4" />
-                                        Browse Icon
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleIconUpload}
-                                        className="hidden"
-                                    />
+                                    <div>
+                                        <label className="block text-sm font-normal text-gray-700 mb-2 flex items-center gap-2">
+                                            <Key className="h-3 w-3 text-gray-400" />
+                                            API Key
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={editedConfig.apiKey}
+                                            onChange={(e) => updateField('apiKey', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                                            placeholder="Enter your API key"
+                                        />
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-500">
-                                    Select an image file (PNG, JPG, GIF, etc.). Maximum size: 2MB. The image will be converted to base64 format.
-                                </p>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-1.5 bg-purple-50 rounded border border-purple-100">
+                                        <Cpu className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900">AI Models</h3>
+                                        <p className="text-xs text-gray-500">Select language and embedding models</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-normal text-gray-700 mb-2">
+                                            Language Model
+                                        </label>
+                                        <select
+                                            value={editedConfig.model}
+                                            onChange={(e) => updateField('model', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                                        >
+                                            <option value="">Select model</option>
+                                            <optgroup label="OpenAI">
+                                                <option value="gpt-4">GPT-4</option>
+                                                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                            </optgroup>
+                                            <optgroup label="Anthropic">
+                                                <option value="claude-3-opus">Claude 3 Opus</option>
+                                                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                                <option value="claude-3-haiku">Claude 3 Haiku</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-normal text-gray-700 mb-2">
+                                            Embedding Model
+                                        </label>
+                                        <select
+                                            value={editedConfig.embeddingModel}
+                                            onChange={(e) => updateField('embeddingModel', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                                        >
+                                            <option value="">Select model</option>
+                                            <optgroup label="OpenAI">
+                                                <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                                                <option value="text-embedding-3-small">text-embedding-3-small</option>
+                                                <option value="text-embedding-3-large">text-embedding-3-large</option>
+                                            </optgroup>
+                                            <optgroup label="Open Source">
+                                                <option value="sentence-transformers">sentence-transformers</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-1.5 bg-green-50 rounded border border-green-100">
+                                        <FileText className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900">Document Processing</h3>
+                                        <p className="text-xs text-gray-500">Configure document ingestion</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-normal text-gray-700 mb-2">
+                                            Document Path
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={editedConfig.documentPath}
+                                                onChange={(e) => updateField('documentPath', e.target.value)}
+                                                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                                                placeholder="/path/to/documents"
+                                            />
+                                            <button
+                                                onClick={triggerDigestion}
+                                                disabled={isTriggering || !editedConfig.documentPath?.trim()}
+                                                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm flex items-center gap-1.5"
+                                            >
+                                                {isTriggering ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <Play className="h-3 w-3" />
+                                                )}
+                                                {isTriggering ? 'Processing' : 'Ingest'}
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1.5">
+                                            Process and index documents from the specified directory path
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={isLoading || !editedConfig.configurationName.trim()}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                {isCreating ? 'Creating...' : 'Saving...'}
-                            </>
-                        ) : (
-                            <>
-                                <Save className="h-4 w-4" />
-                                {isCreating ? 'Create Configuration' : 'Save Changes'}
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// DeleteModal Component
-interface DeleteModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    configuration: AppSettings | null;
-    onConfirm: () => void;
-    isLoading: boolean;
-}
-
-const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, configuration, onConfirm, isLoading }) => {
-    if (!isOpen || !configuration) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">Delete Configuration</h2>
+                <div className="flex items-center p-3 border-t border-gray-100 bg-white">
+                    <div className="flex items-center gap-2 ml-auto">
+                        <button
+                            onClick={onClose}
+                            className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isLoading || !editedConfig.configurationName.trim()}
+                            className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-1.5"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    {isCreating ? 'Creating...' : 'Saving...'}
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-3 w-3" />
+                                    {isCreating ? 'Create' : 'Save'}
+                                </>
+                            )}
+                        </button>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                <div className="p-6">
-                    <p className="text-gray-700 mb-4">
-                        Are you sure you want to delete the configuration "{configuration.configurationName}"?
-                        This action cannot be undone.
-                    </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={isLoading}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Deleting...
-                            </>
-                        ) : (
-                            <>
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                            </>
-                        )}
-                    </button>
                 </div>
             </div>
         </div>
