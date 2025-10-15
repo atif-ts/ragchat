@@ -69,13 +69,16 @@ export const CitationLink = ({ citation }: { citation: Citation }) => {
         }
     };
 
+    const ext = getFileExtension(citation.filename);
+    const isDoc = ext === 'doc' || ext === 'docx';
+
     return (
         <>
             <div className="inline-flex items-center gap-1 bg-blue-50 rounded-md border border-blue-200">
                 <button
-                    onClick={handleView}
-                    className="inline-flex items-center gap-1.5 px-2 py-1 text-xs hover:bg-blue-100 text-blue-700 transition-colors rounded-l-md"
-                    title={`View: ${citation.filename}${citation.page_number ? ` (Page ${citation.page_number})` : ''}`}
+                    onClick={isDoc ? handleDownload : handleView}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs hover:bg-blue-100 text-blue-700 transition-colors ${isDoc ? 'rounded-md' : 'rounded-l-md'}`}
+                    title={`${isDoc ? 'Download' : 'View'}: ${citation.filename}${citation.page_number ? ` (Page ${citation.page_number})` : ''}`}
                 >
                     <div className="flex items-center gap-1">
                         {getFileIcon(citation.filename)}
@@ -88,16 +91,22 @@ export const CitationLink = ({ citation }: { citation: Citation }) => {
                             </span>
                         )}
                     </div>
-                    <Eye className="h-3 w-3 opacity-60" />
+                    {isDoc ? (
+                        <Download className="h-3 w-3 opacity-60" />
+                    ) : (
+                        <Eye className="h-3 w-3 opacity-60" />
+                    )}
                 </button>
 
-                <button
-                    onClick={handleDownload}
-                    className="px-2 py-1 hover:bg-blue-100 text-blue-700 transition-colors rounded-r-md border-l border-blue-200"
-                    title="Download file"
-                >
-                    <Download className="h-3 w-3" />
-                </button>
+                {!isDoc && (
+                    <button
+                        onClick={handleDownload}
+                        className="px-2 py-1 hover:bg-blue-100 text-blue-700 transition-colors rounded-r-md border-l border-blue-200"
+                        title="Download file"
+                    >
+                        <Download className="h-3 w-3" />
+                    </button>
+                )}
             </div>
 
             <DocumentViewerDialog
