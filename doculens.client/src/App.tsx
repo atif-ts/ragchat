@@ -38,6 +38,8 @@ export default function App() {
     };
 
     const [settings, setSettings] = useState<AppSettings>({
+        id: 0,
+        provider: '',
         documentPath: '',
         endpoint: '',
         model: '',
@@ -45,9 +47,8 @@ export default function App() {
         apiKey: '',
         configurationName: '',
         createdAt: '',
-        id: 0,
-        isActive: false,
-        updatedAt: ''
+        updatedAt: '',
+        isActive: false
     });
 
     useEffect(() => { loadConfiguration(); }, []);

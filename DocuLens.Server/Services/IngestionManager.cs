@@ -1,5 +1,9 @@
-﻿using DocuLens.Server.Ingestion;
+﻿using DocuLens.Server.Hubs;
+using DocuLens.Server.Ingestion;
 using DocuLens.Server.Interfaces;
+using DocuLens.Server.Models;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.VectorData;
 
 namespace DocuLens.Server.Services;
 
@@ -44,10 +48,21 @@ public class IngestionManager : IIngestionManager
             if (!Directory.Exists(documentPath))
             {
                 _logger.LogWarning("Document path does not exist: {DocumentPath}", documentPath);
+
+                await NotifyNothingToIngest();
                 return;
             }
 
-            var documentSource = new DocumentDirectorySource(documentPath);
+            var documentSource = new DocumentDirectorySource(documentPath, serviceProvider: _serviceProvider);
+            var newDocs = await documentSource.GetNewOrModifiedDocumentsAsync(await GetExistingDocsAsync());
+
+            if (!newDocs.Any())
+            {
+                _logger.LogInformation("Nothing new to ingest for path: {DocumentPath}", documentPath);
+                await NotifyNothingToIngest();
+                return;
+            }
+
             await DataIngestor.IngestDataAsync(_serviceProvider, documentSource);
 
             _logger.LogInformation("Data ingestion completed successfully for path: {DocumentPath}", documentPath);
@@ -62,5 +77,20 @@ public class IngestionManager : IIngestionManager
             _isIngestionInProgress = false;
             _semaphore.Release();
         }
+    }
+
+    private async Task NotifyNothingToIngest()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hub = scope.ServiceProvider.GetRequiredService<IHubContext<IngestionProgressHub>>();
+        await hub.Clients.All.SendAsync("NothingToIngest");
+    }
+
+    private async Task<IReadOnlyList<IngestedDocument>> GetExistingDocsAsync()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var docsColl = scope.ServiceProvider
+            .GetRequiredService<VectorStoreCollection<string, IngestedDocument>>();
+        return await docsColl.GetAsync(_ => true, int.MaxValue).ToListAsync();
     }
 }

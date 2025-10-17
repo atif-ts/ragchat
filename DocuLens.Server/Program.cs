@@ -1,4 +1,5 @@
 ﻿using DocuLens.Server.Database;
+using DocuLens.Server.Hubs;
 using DocuLens.Server.Interfaces;
 using DocuLens.Server.Models;
 using DocuLens.Server.Providers;
@@ -18,7 +19,8 @@ Directory.CreateDirectory(Path.GetDirectoryName(configurationPath)!);
 builder.Services.AddDbContextFactory<ConfigDbContext>(
     o => o.UseSqlite($"Data Source={configurationPath}"),
     ServiceLifetime.Singleton);
-//builder.Services.AddSingleton(sp => sp.GetRequiredService<IDbContextFactory<ConfigDbContext>>().CreateDbContext());
+
+builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<AzureAIWrapper>();
 builder.Services.AddSingleton<BedrockWrapper>();
@@ -35,6 +37,8 @@ var vectorConn = $"Data Source={vectorPath}";
 
 builder.Services.AddSqliteCollection<string, IngestedChunk>("data-graniterag-chunks", vectorConn);
 builder.Services.AddSqliteCollection<string, IngestedDocument>("data-graniterag-documents", vectorConn);
+
+builder.Services.AddHostedService<VectorStoreInitializer>();
 
 builder.Services.AddSingleton<DataIngestor>();
 builder.Services.AddSingleton<SemanticSearch>();
@@ -71,7 +75,8 @@ builder.Services.AddCors(opt =>
     opt.AddPolicy("AllowReactApp", pol =>
         pol.WithOrigins("https://localhost:65413")
            .AllowAnyHeader()
-           .AllowAnyMethod());
+           .AllowAnyMethod()
+           .AllowCredentials());
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -86,6 +91,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseRouting();
 app.UseCors("AllowReactApp");
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 if (app.Environment.IsDevelopment())
@@ -94,7 +100,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseHttpsRedirection();
-app.UseAuthorization();
+
+app.MapHub<IngestionProgressHub>("/ingestionHub").AllowAnonymous();
+
 app.MapControllers();
 app.MapFallbackToFile("/index.html");
 

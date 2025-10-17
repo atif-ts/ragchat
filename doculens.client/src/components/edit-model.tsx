@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Edit3, X, Save, Loader2, Play, Server, Cpu, FileText, Key } from 'lucide-react';
 import { type AppSettings } from '../models';
-
+import { IngestionQueueModal } from './ingestion-queue-modal';
+import { useIngestionProgress } from "../hooks/useIngestionProgress";
 interface EditModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -15,6 +16,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
     const [editedConfig, setEditedConfig] = useState<AppSettings | null>(null);
     const [isTriggering, setIsTriggering] = useState(false);
     const [triggerMessage, setTriggerMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    const [queueOpen, setQueueOpen] = useState(false);
+    const { reset } = useIngestionProgress();
 
     useEffect(() => {
         if (isOpen) {
@@ -68,6 +72,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
         }
 
         try {
+            setQueueOpen(true);
+
             setIsTriggering(true);
             setTriggerMessage(null);
 
@@ -97,8 +103,19 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, configura
 
     if (!isOpen || !editedConfig) return null;
 
+    useEffect(() => {
+        if (queueOpen) reset();
+    }, [queueOpen]);
+
     return (
         <div className="fixed inset-0 bg-gray-500/50 z-50 flex items-center justify-center p-4">
+            { queueOpen && 
+                <IngestionQueueModal
+                    key={Date.now()}
+                    isOpen={queueOpen}
+                    onClose={() => setQueueOpen(false)}
+                />
+            }            
             <div className="bg-white rounded-md border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between py-2.5 px-4 border-b bg-gray-50 border-gray-300">
                     <div className="flex items-center gap-3">
